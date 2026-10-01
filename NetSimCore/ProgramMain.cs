@@ -1,5 +1,4 @@
 ﻿using NETSIM.Server;
-using NETSIM_ConsoleView;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +7,7 @@ using System.Threading.Tasks;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.Mapper;
 using NETSIM.MetaData.Interface;
+using NETSIM_ConsoleView;
 
 namespace NETSIM
 {

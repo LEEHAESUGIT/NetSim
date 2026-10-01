@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NETSIM_ConsoleView\NETSIM_ConsoleView.csproj" />
-    <ProjectReference Include="..\Shared\Shared.csproj" />
+    <ProjectReference Include="C:\Users\child\Desktop\NetSim\NetSimShared\Shared.csproj" />
+    <ProjectReference Include="C:\Users\child\Desktop\NetSim\NetSimViewConsole\NETSIM_ConsoleView.csproj" />
   </ItemGroup>
   
 </Project>
