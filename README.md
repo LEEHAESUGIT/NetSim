@@ -1,4 +1,4 @@
-# NetSim (Network System)
+# NetSim (Network Simulation)
 ## 상태 : 진행 중
 
 # 개발환경
