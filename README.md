@@ -1,5 +1,7 @@
 # NetSim (Network Simulation)
-## 상태 : 진행 중
+## 상태 : 진행 중(프로토타입)
+### 연관 프로젝트
++ 클라이언트 : [NetSimClient](<https://github.com/LEEHAESUGIT/NetSimClient>)
 
 # 개발환경
 + IDE : Visual Studio 2022
@@ -7,8 +9,6 @@
 + Monitoring & UI : Console
   + Package : Spectre.Console
 
-# 클라이언트
-+ https://github.com/LEEHAESUGIT/NetSimClient
 
 # 소개
 "NetSim"은 멀티플레이어 환경에서 서버 - 클라이언트 간의 네트워크 통신 및 동기화 과정을 이해하기 위해 구현하고 있는 네트워크 시뮬레이션 서버의 프로토타입 입니다.
