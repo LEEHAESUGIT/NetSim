@@ -44,6 +44,11 @@
 + 실시간 콘솔 대시보드 모니터
   + Spectre.Console 패키지를 활용하여 세션 수 , 룸 상태 , 초당 패킷처리 등 실시간 레이아웃 콘솔 UI로 시각화  
 
+# NetSim 아키텍처 다이이어그램
+<img width="1645" height="8191" alt="NetSim Async Pipeline-2026-10-05" src="https://github.com/user-attachments/assets/90fb9e97-ca07-49e4-88e3-b9de0c05ed22" />
+
+
+
 
 # 구성
 ```
