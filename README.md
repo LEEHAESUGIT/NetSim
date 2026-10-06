@@ -1,5 +1,6 @@
 # NetSim (Network Simulation)
 ## 상태 : 진행 중(프로토타입)
+## 프로젝트 시작 : 2026.04
 ### 연관 프로젝트
 + 클라이언트 : [NetSimClient](<https://github.com/LEEHAESUGIT/NetSimClient>)
 
