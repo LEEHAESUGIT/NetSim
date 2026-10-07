@@ -83,7 +83,7 @@ namespace NETSIM.Server.Module
 						_sessionLifeCycleService.OnSessionConnected(client, _moudlePipe, _cts.Token);
 					},ct);
 				}
-				catch (Exception ex) { }
+				catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 			}
 		}
 

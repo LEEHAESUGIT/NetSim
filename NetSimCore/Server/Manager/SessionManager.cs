@@ -102,13 +102,12 @@ namespace NETSIM.Server.Manager
 					_waitPool.Push(item);
 					Interlocked.Increment(ref PoolCount);
 					ServerMeasure.Instance.OnSessionEntityCount(RegistryCount);
-
-					//_sessionPlayerRegistry.UMap(sessionID);
 				}
 			}
-			catch (Exception)
+			catch (Exception ex) 
 			{
 
+				Console.WriteLine($"[Error] : {ex}");
 			}
 		}
 	}

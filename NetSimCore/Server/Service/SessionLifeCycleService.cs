@@ -46,8 +46,9 @@ namespace NETSIM.Server.Service
 					}
 				}
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 			}
 		}
 
@@ -66,7 +67,7 @@ namespace NETSIM.Server.Service
 					session.Start();
 				}
 			}
-			catch (Exception) { }
+			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 		}
 		internal void OnSessionDisconnected(int sessionID)
 		{

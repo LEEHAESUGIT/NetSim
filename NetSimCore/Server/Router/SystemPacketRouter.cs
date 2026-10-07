@@ -33,7 +33,7 @@ namespace NETSIM.Server.Router
 					action.Invoke(context);
 				}
 			}
-			catch (Exception) { }
+			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 
 
 		}

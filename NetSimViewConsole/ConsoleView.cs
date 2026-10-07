@@ -20,19 +20,8 @@ namespace NETSIM_ConsoleView
 		private static bool _isRefresh = true;
 		private static object _updateLock = new object();
 
-
-
 		// Manager
 		private static DrawManager _drawManager = new(ref _isRefresh);
-
-		// 
-
-
-
-		public static void Main()
-		{
-
-		}
 
 		public static void Start()
 		{
@@ -44,13 +33,8 @@ namespace NETSIM_ConsoleView
 					_drawManager.Live();
 
 				}
-				catch (Exception ex) { }
+				catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 			});
-
-
-
-			//_ = Loop();
-			//Task.Run(() => Loop());
 		}
 		public void Stop() { }
 
@@ -70,17 +54,5 @@ namespace NETSIM_ConsoleView
 				_isRefresh = true;
 			}
 		}
-
-		//private static async Task Loop()
-		//{
-		//	var ConsoleViewTask =  Task.Run(() =>
-		//	{
-		//		try
-		//		{
-		//			_drawManager.Live();
-		//		}
-		//		catch (Exception ex) { }
-		//	});
-		//}
 	}
 }

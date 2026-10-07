@@ -92,7 +92,7 @@ namespace NETSIM.Sockets
 				Clear();
 				OnDisconnected?.Invoke(this.SessionID);
 			}
-			catch (Exception ex) { }
+			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 		}
 
 		private void Clear()
@@ -144,6 +144,7 @@ namespace NETSIM.Sockets
 			}
 			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 				return false;
 			}
 		}

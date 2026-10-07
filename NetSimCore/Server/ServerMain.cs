@@ -34,28 +34,6 @@ namespace NETSIM.Server
 		private GameModule _gameModule;
 		private MeasureModule _measureModule;
 
-
-
-
-
-
-		//private readonly TcpListener _listner;
-		//private ISessionPlayerRegistry _sessionPlayerRegistry;
-
-		//private SessionManager _sessionManager;
-		//private PacketSender _sendManager;
-
-		//private SystemHandle _systemHandle;
-		//private SystemPacketRouterInit _packetRouterInit;
-		//private SystemPacketRouter _inSystemPacketrouter;
-
-		//private MeasureTask _measureTask;
-		//private AcceptTask _acceptTask;
-		//private SystemProcessTask _systemProcessTask;
-		//private SystemSendTask _systemSendTask;
-		//private IngameSendTask _ingameSendTask;
-
-
 		private bool _isRunning = false;
 
 
@@ -95,6 +73,7 @@ namespace NETSIM.Server
 			}
 			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 				return false;
 			}
 		}
@@ -115,33 +94,9 @@ namespace NETSIM.Server
 			}
 			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 				return false;
 			}
 		}
-
-
-		//private void WireEvents()
-		//{
-		//	// AcceptTask -> Signal -> CreateSession;
-		//	_acceptTask.OnSessionAccept = (tcpClient) => _sessionManager.CreateSession(tcpClient, _systemProcessPipe, _ingameProcessPipe, _serverCTS.Token);
-
-		//}
-
-		//private void CallLoop()
-		//{
-		//	_ = _measureTask.LoopAsync(_serverCTS.Token);
-		//	_ = _acceptTask.LoopAsync(_serverCTS.Token);
-
-		//	_ = _sessionManager.SessionHeartbeatCycle(_serverCTS.Token);
-
-		//	// ReceivePacket 
-		//	_ = _systemProcessTask.LoopAsync(_serverCTS.Token);
-
-		//	// Send Packet 
-		//	_ = _systemSendTask.LoopAsync(_serverCTS.Token);
-		//	_ = _ingameSendTask.LoopAsync(_serverCTS.Token);
-		//}
-
-
 	}
 }

@@ -50,8 +50,9 @@ namespace NETSIM_ConsoleView.Common.Tool
 				slot = SearchOccupySlotKey(sessionID);
 				return true;
 			}
-			catch (Exception e)
+			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 				slot = ESlotConfig.NONE;
 				return false;
 			}
@@ -76,8 +77,9 @@ namespace NETSIM_ConsoleView.Common.Tool
 				ClearSlot(occupySlotKey);
 				return true;
 			}
-			catch (Exception e)
+			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 				return false;
 			}
 		}
@@ -95,6 +97,7 @@ namespace NETSIM_ConsoleView.Common.Tool
 			}
 			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 				return false;
 			}
 		}

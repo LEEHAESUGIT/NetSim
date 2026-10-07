@@ -68,7 +68,7 @@ namespace NETSIM.Server.Function
 					}
 				}
 			}
-			catch (Exception) { }
+			catch (Exception ex ) { Console.WriteLine($"[Error] : {ex}"); }
 		}
 
 

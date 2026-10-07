@@ -101,7 +101,7 @@ namespace NETSIM.Server.Function
 					_ = session.Send(packetData);
 				});
 			}
-			catch (Exception ex) { }
+			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 		}
 
 		private void Broadcast(IPacket packet)
@@ -115,7 +115,7 @@ namespace NETSIM.Server.Function
 					_ = session.Send(packetData);
 				});
 			}
-			catch (Exception ex) { }
+			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 		}
 		
 		private void BroadcastExcept(int exceptSessionID , IPacket packet)
@@ -130,8 +130,8 @@ namespace NETSIM.Server.Function
 				});
 
 			}
-			catch (Exception)
-			{ }
+			catch (Exception ex)
+			{ Console.WriteLine($"[Error] : {ex}"); }
 		}
 
 

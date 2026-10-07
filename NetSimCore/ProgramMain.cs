@@ -20,7 +20,7 @@ namespace NETSIM
 			try
 			{
 				CancellationTokenSource _cts = new CancellationTokenSource();
-				SessionPlayerMapper _sessionPlayerMapper = new SessionPlayerMapper();
+				//SessionPlayerMapper _sessionPlayerMapper = new SessionPlayerMapper();
 
 				ConsoleView.Start();
 				ServerMain _server = new ServerMain(9999, _cts);
@@ -31,8 +31,9 @@ namespace NETSIM
 					while (true) { }
 				}
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 			}
 		}
 	}

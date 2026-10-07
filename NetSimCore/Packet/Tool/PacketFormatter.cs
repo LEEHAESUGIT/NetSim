@@ -94,8 +94,9 @@ namespace NETSIM.Packet.Tool
 				}
 				return false;
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
+				Console.WriteLine($"[Error] : {ex}");
 				return false;
 			}
 		}
