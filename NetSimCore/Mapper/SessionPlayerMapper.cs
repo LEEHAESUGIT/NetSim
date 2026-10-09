@@ -34,7 +34,7 @@ namespace NETSIM.Mapper
 		{
 			if (SessionToPlayer.TryRemove(sessionID, out int playerID))
 			{
-				if (PlayerToSession.TryRemove(playerID, out _)) ;
+				if (PlayerToSession.TryRemove(playerID, out _)) { }
 			}
 		}
 		public int GetPlayerID(int sessionID) => SessionToPlayer.GetValueOrDefault(sessionID, -1);

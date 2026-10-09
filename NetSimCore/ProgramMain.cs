@@ -8,6 +8,7 @@ using NETSIM.Server.Router.Pipe;
 using NETSIM.Mapper;
 using NETSIM.MetaData.Interface;
 using NETSIM_ConsoleView;
+using NETSIM_ConsoleView.LogMonitor;
 
 namespace NETSIM
 {
@@ -20,11 +21,12 @@ namespace NETSIM
 			try
 			{
 				CancellationTokenSource _cts = new CancellationTokenSource();
-				//SessionPlayerMapper _sessionPlayerMapper = new SessionPlayerMapper();
 
 				ConsoleView.Start();
+
+				LogView.Instance.OnLogMonitor();
 				ServerMain _server = new ServerMain(9999, _cts);
-				
+
 
 				if (_server.Start())
 				{

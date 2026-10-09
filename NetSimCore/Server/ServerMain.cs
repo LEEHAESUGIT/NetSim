@@ -29,7 +29,6 @@ namespace NETSIM.Server
 
 		private ModulePipe _modulePipe;
 
-
 		private NetworkModule _networkModule;
 		private GameModule _gameModule;
 		private MeasureModule _measureModule;

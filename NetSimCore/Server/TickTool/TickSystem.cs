@@ -4,12 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NETSIM.MetaData.Interface
+namespace NETSIM.Server.TickTool
 {
-	internal interface IModule
+	internal class TickSystem
 	{
-		void Start();
-		void Stop();
-	}
 
+
+
+
+
+	}
 }

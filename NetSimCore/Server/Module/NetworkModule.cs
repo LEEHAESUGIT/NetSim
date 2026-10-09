@@ -3,6 +3,7 @@ using NETSIM.Server.Manager;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.Server.Service;
 using NETSIM.Sockets;
+using NETSIM_ConsoleView.LogMonitor;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,26 +51,21 @@ namespace NETSIM.Server.Module
 
 		public void Start()
 		{
-			WireEvents();
-
 			this._listner.Start();
 			this._sessionLifeCycleService.Start(_cts.Token);
 			this._packetService.Start(_cts.Token);
 
 			_ = AcceptLoopAsync(_cts.Token);
+
+			
 		}
 
-		public void Stop() { }
-
-		public void WireEvents()
-		{
-
+		public void Stop() 
+		{ 
+			this._listner.Stop();
+			this._cts.Cancel();
 		}
 
-		public void PipeWire()
-		{
-
-		}
 
 		public async Task AcceptLoopAsync(CancellationToken ct)
 		{
