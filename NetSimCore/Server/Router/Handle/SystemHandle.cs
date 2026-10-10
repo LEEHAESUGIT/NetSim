@@ -35,46 +35,43 @@ namespace NETSIM.Server.Router.Handle
 
 		internal void HeartBeatHeandle(ReceivePacketContext context)
 		{
-			using (new ExecutionTimeProfiler($"HeartBeatHeandle"))
+
+			if (context.Packet is C2S_HeartBeat Packet)
 			{
-				if (context.Packet is C2S_HeartBeat Packet)
+				SessionMeasure.Instance.OnSystemCommand(context.SessionID, "HeartBeat");
+
+				long nowTick = Environment.TickCount64;
+				DateTime nowTime = DateTime.UtcNow;
+
+				long nowTimeTypeLong = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+
+				_sessionManager.TryExcute(context.SessionID, session =>
 				{
-					SessionMeasure.Instance.OnSystemCommand(context.SessionID, "HeartBeat");
+					session.LastHeartBeatTick = nowTick;
+					session.LastHeartBeatTime = nowTime;
+				});
 
-					long nowTick = Environment.TickCount64;
-					DateTime nowTime = DateTime.UtcNow;
-
-					long nowTimeTypeLong = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-
-					_sessionManager.TryExcute(context.SessionID, session =>
-					{
-						session.LastHeartBeatTick = nowTick;
-						session.LastHeartBeatTime = nowTime;
-					});
-
-					if (Packet.ServerTick > 0)
-					{
-						long ping = nowTick - Packet.ServerTick;
-						SessionMeasure.Instance.OnPing(context.SessionID, (int)ping);
-					}
-
-					_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
-						new S2C_HeartBeat(nowTimeTypeLong, nowTick, Packet.WasSendTime)));
+				if (Packet.ServerTick > 0)
+				{
+					long ping = nowTick - Packet.ServerTick;
+					SessionMeasure.Instance.OnPing(context.SessionID, (int)ping);
 				}
+
+				_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
+					new S2C_HeartBeat(nowTimeTypeLong, nowTick, Packet.WasSendTime)));
 			}
+
 		}
 		internal void InitSessionHandle(ReceivePacketContext context)
 		{
-			using (new ExecutionTimeProfiler($"InitSessionHandle"))
+			if (context.Packet is C2S_InitRequest Packet)
 			{
-				if (context.Packet is C2S_InitRequest Packet)
-				{
-					_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
-						new S2C_InitResponse(context.SessionID)));
+				_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
+					new S2C_InitResponse(context.SessionID)));
 
-				}
 			}
+
 		}
 
 

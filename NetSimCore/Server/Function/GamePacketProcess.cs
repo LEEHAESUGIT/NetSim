@@ -4,6 +4,7 @@ using NETSIM.Server.Router;
 using NETSIM.Server.Router.Handle;
 using NETSIM.Server.Router.Init;
 using NETSIM.Server.Router.Pipe;
+using NETSIM.Server.TickTool;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,6 +33,8 @@ namespace NETSIM.Server.Function
 
 
 
+		private TickSystem _tickSystem;
+
 
 		internal GamePacketProcess(PlayerManager playerManager, GamePacketPipe gamePacketPipe)
 		{
@@ -48,30 +51,36 @@ namespace NETSIM.Server.Function
 			this._gamePacketRouterInit = new GamePacketRouterInit(_gameHandle);
 			this._gamePacketRouter = new GamePacketRouter(_gamePacketRouterInit.InitIngamePacketRouter());
 
+
+			this._tickSystem = new TickSystem(64 , _gamePacketPipe , _gamePacketRouter);
 		}
 
 
 		internal void Start(CancellationToken shutDownToken)
 		{
-			_ = GameProcessLoopAsync(shutDownToken);
+			_ = _tickSystem.GamePacketByTickProcessAsync(shutDownToken);
+
+			//_ = GameProcessLoopAsync(shutDownToken);
 		}
 
-		internal async Task GameProcessLoopAsync(CancellationToken shutDownToken)
-		{
-			try
-			{
-				while (!shutDownToken.IsCancellationRequested)
-				{
-					if (await _gamePacketPipe.InBoundPipe.WaitForPipe(shutDownToken))
-					{
-						while (_gamePacketPipe.InBoundPipe.TryRead(out ReceivePacketContext context))
-						{
-							_gamePacketRouter.Apply(context);
-						}
-					}
-				}
-			}
-			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
-		}
+
+
+		//internal async Task GameProcessLoopAsync(CancellationToken shutDownToken)
+		//{
+		//	try
+		//	{
+		//		while (!shutDownToken.IsCancellationRequested)
+		//		{
+		//			if (await _gamePacketPipe.InBoundPipe.WaitForPipe(shutDownToken))
+		//			{
+		//				while (_gamePacketPipe.InBoundPipe.TryRead(out ReceivePacketContext context))
+		//				{
+		//					_gamePacketRouter.Apply(context);
+		//				}
+		//			}
+		//		}
+		//	}
+		//	catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
+		//}
 	}
 }

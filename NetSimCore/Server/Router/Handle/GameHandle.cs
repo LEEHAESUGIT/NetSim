@@ -58,23 +58,26 @@ namespace NETSIM.Server.Router.Handle
 							new S2C_SpawnResponse(context.SessionID, issuanceID, (int)issuanceColor)));
 					}
 				}
-			
+
 			}
 
 		}
 
 		internal void PlayerMoveHandle(ReceivePacketContext context)
 		{
-			if (context.Packet is C2S_MovePacket Packet)
-			{
+			//using (new ExecutionTimeProfiler($"PlayerMoveHandle"))
+			//{
+				if (context.Packet is C2S_MovePacket Packet)
+				{
 
-				_gamePacketPipe.OutBoundPipe.TryWrite(
-					new ResultPacketContext(ESendType.BROADCASTEXCEPT, context.SessionID,
-					new S2C_MovePacket(Packet.PlayerID, Packet.MoveFlag, Packet.PosX, Packet.PosZ))
-					);
-				SessionMeasure.Instance.OnGameCommand(context.SessionID, "Move");
+					_gamePacketPipe.OutBoundPipe.TryWrite(
+						new ResultPacketContext(ESendType.BROADCASTEXCEPT, context.SessionID,
+						new S2C_MovePacket(Packet.PlayerID, Packet.MoveFlag, Packet.PosX, Packet.PosZ))
+						);
+					SessionMeasure.Instance.OnGameCommand(context.SessionID, "Move");
 
-			}
+				}
+		//	}
 		}
 
 
