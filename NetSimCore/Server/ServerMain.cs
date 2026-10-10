@@ -18,6 +18,7 @@ using NETSIM.Context;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.Server.Router.Init;
 using NETSIM.Server.Module;
+using NETSIM_ConsoleView.LogMonitor;
 
 
 namespace NETSIM.Server
@@ -56,23 +57,17 @@ namespace NETSIM.Server
 				this._measureModule.Start();
 				this._isRunning = true;
 
-
-
-
-				//_listner.Start();
-
 				ServerMeasure.Instance.OnTimer();
 				ServerMeasure.Instance.OnStateLight(EStateLight.GREEN);
 				ServerMeasure.Instance.OnServerIsRunning(_isRunning);
 
-				//WireEvents();
-				//CallLoop();
+				LogView.Instance.WriteLogFile(ELogType.INFO , $"---------------------SERVER START---------------------");
 
 				return true;
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[Error] : {ex}");
+				LogView.Instance.WriteLogFile(ELogType.FATAL , $" FailServerStart , error : {ex}");
 				return false;
 			}
 		}
@@ -89,6 +84,7 @@ namespace NETSIM.Server
 				ServerMeasure.Instance.OnStateLight(EStateLight.RED);
 				ServerMeasure.Instance.OffTimer();
 
+				LogView.Instance.WriteLogFile(ELogType.INFO , $"---------------------SERVER STOP---------------------");
 				return true;
 			}
 			catch (Exception ex)

@@ -47,7 +47,7 @@ namespace NETSIM_ConsoleView.LogMonitor
 
 			// 한글 경로 등에서 깨지지 않게 UTF8로 파일 생성
 			File.AppendAllText(_logFilePath, cmdCommand, Encoding.UTF8);
-			File.AppendAllText(_logFilePath, "-- Log Started ---");
+			File.AppendAllText(_logFilePath, "-- Log Started --- \n");
 			_ = Run();
 
 		}

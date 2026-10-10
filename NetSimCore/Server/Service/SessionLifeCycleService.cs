@@ -2,6 +2,7 @@ using Microsoft.Win32;
 using NETSIM.Server.Manager;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.Sockets;
+using NETSIM_ConsoleView.LogMonitor;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +40,7 @@ namespace NETSIM.Server.Service
 
 					foreach (Session session in _sessionManager.LiveSessions.Values)
 					{
+						LogView.Instance.WriteLogFile(ELogType.DEBUG , $"{currentTick - session.LastHeartBeatTick}");
 						if (currentTick - session.LastHeartBeatTick > 15000) // 15sec == 15000ms
 						{
 							session.Disconnect();
@@ -48,7 +50,7 @@ namespace NETSIM.Server.Service
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[Error] : {ex}");
+				LogView.Instance.WriteLogFile(ELogType.ERROR , $"SessionHeartbeatCycle error:{ex}");
 			}
 		}
 
@@ -67,7 +69,10 @@ namespace NETSIM.Server.Service
 					session.Start();
 				}
 			}
-			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
+			catch (Exception ex) 
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"OnSessionConnected error:{ex}");
+			}
 		}
 		internal void OnSessionDisconnected(int sessionID)
 		{

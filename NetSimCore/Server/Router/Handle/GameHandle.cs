@@ -7,6 +7,7 @@ using NETSIM.Server.Function;
 using NETSIM.Server.Manager;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.Sockets;
+using Shared.ExecutionTimeMeasureTool;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +28,7 @@ namespace NETSIM.Server.Router.Handle
 		private PlayerIssuance _playerIssuance;
 
 
-		internal GameHandle(PlayerManager playerManager , GamePacketPipe gamePacketPipe , PlayerIssuance playerIssuance)
+		internal GameHandle(PlayerManager playerManager, GamePacketPipe gamePacketPipe, PlayerIssuance playerIssuance)
 		{
 			this._playerManager = playerManager;
 			this._gamePacketPipe = gamePacketPipe;
@@ -37,49 +38,39 @@ namespace NETSIM.Server.Router.Handle
 
 		internal void SpawnRequestHandle(ReceivePacketContext context)
 		{
-			if (context.Packet is C2S_SpawnRequest Packet)
+
+			using (new ExecutionTimeProfiler($"SpawnRequestHandle"))
 			{
-				SessionMeasure.Instance.OnGameCommand(context.SessionID, "SpawnRequest");
 
-				int issuanceID = _playerIssuance.IssuancePlayerID();
-				EPlayerColor issuanceColor = (EPlayerColor)(context.SessionID+1);
-
-				if(_playerManager.CreatePlayer(issuanceID, context.SessionID, issuanceColor))
+				if (context.Packet is C2S_SpawnRequest Packet)
 				{
-					SessionMeasure.Instance.OnPlayerID(context.SessionID , issuanceID);
-					SessionMeasure.Instance.OnPlayerColor(context.SessionID , issuanceColor);
-					_gamePacketPipe.OutBoundPipe.TryWrite(
-						new ResultPacketContext(ESendType.UNICAST , context.SessionID,
-						new S2C_SpawnResponse(context.SessionID , issuanceID , (int)issuanceColor)));
-				}
-				
+					SessionMeasure.Instance.OnGameCommand(context.SessionID, "SpawnRequest");
 
-				//if (_playerManager.CreatePlayer(out int playerID))
-				//{
-				//	EPlayerColor color;
-				//	if (_playerManager.TryGetPlayer(playerID, out Player player))
-				//	{
-				//		color = player.PlayerColor;
-				//	}
-				//	else
-				//	{
-				//		color = 0;
-				//	}
-				//	SessionMeasure.Instance.OnPlayerID(context.SessionID, playerID);
-				//	_gamePacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.BROADCAST, context.SessionID,
-				//		new S2C_SpawnResponse(context.SessionID, playerID, (int)color)));
-				//}
+					int issuanceID = _playerIssuance.IssuancePlayerID();
+					EPlayerColor issuanceColor = (EPlayerColor)(context.SessionID + 1);
+
+					if (_playerManager.CreatePlayer(issuanceID, context.SessionID, issuanceColor))
+					{
+						SessionMeasure.Instance.OnPlayerID(context.SessionID, issuanceID);
+						SessionMeasure.Instance.OnPlayerColor(context.SessionID, issuanceColor);
+						_gamePacketPipe.OutBoundPipe.TryWrite(
+							new ResultPacketContext(ESendType.UNICAST, context.SessionID,
+							new S2C_SpawnResponse(context.SessionID, issuanceID, (int)issuanceColor)));
+					}
+				}
+			
 			}
+
 		}
 
 		internal void PlayerMoveHandle(ReceivePacketContext context)
 		{
-			if(context.Packet is C2S_MovePacket Packet)
+			if (context.Packet is C2S_MovePacket Packet)
 			{
 
 				_gamePacketPipe.OutBoundPipe.TryWrite(
-					new ResultPacketContext(ESendType.BROADCASTEXCEPT , context.SessionID , 
-					new S2C_MovePacket(Packet.PlayerID, Packet.MoveFlag , Packet.PosX , Packet.PosZ ))
+					new ResultPacketContext(ESendType.BROADCASTEXCEPT, context.SessionID,
+					new S2C_MovePacket(Packet.PlayerID, Packet.MoveFlag, Packet.PosX, Packet.PosZ))
 					);
 				SessionMeasure.Instance.OnGameCommand(context.SessionID, "Move");
 

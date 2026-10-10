@@ -57,11 +57,11 @@ namespace NETSIM.Server.Module
 
 			_ = AcceptLoopAsync(_cts.Token);
 
-			
+
 		}
 
-		public void Stop() 
-		{ 
+		public void Stop()
+		{
 			this._listner.Stop();
 			this._cts.Cancel();
 		}
@@ -77,12 +77,14 @@ namespace NETSIM.Server.Module
 					_ = Task.Run(() =>
 					{
 						_sessionLifeCycleService.OnSessionConnected(client, _moudlePipe, _cts.Token);
-					},ct);
+					}, ct);
+
+					LogView.Instance.WriteLogFile(ELogType.INFO, $"TryAcceptClient : {client}");
 				}
-				catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
-			}
+				catch (Exception ex)
+				{
+					LogView.Instance.WriteLogFile(ELogType.ERROR, $"Fail Accept Client, {ex}");
+				} }
 		}
-
-
 	}
 }

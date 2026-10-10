@@ -2,6 +2,7 @@
 using NETSIM.MetaData.Interface;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.Sockets;
+using NETSIM_ConsoleView.LogMonitor;
 using Shared.Configration;
 using System;
 using System.Collections.Concurrent;
@@ -33,6 +34,7 @@ namespace NETSIM.Server.Manager
 				_waitPool.Push(new Session(i));
 				Interlocked.Increment(ref PoolCount);
 			}
+			LogView.Instance.WriteLogFile(ELogType.INFO , $"SessionManager fill WaitPool. Now WaitPoolCount: {PoolCount}");
 		}
 
 		#region Function
@@ -86,6 +88,11 @@ namespace NETSIM.Server.Manager
 					createSession = item;
 				}
 			}
+
+			LogView.Instance.WriteLogFile(ELogType.INFO , "SucessSessionCreate");
+			LogView.Instance.WriteLogFile(ELogType.INFO , $"WaitPool : {PoolCount}");
+			LogView.Instance.WriteLogFile(ELogType.INFO , $"LiveSessions : {RegistryCount} ");
+
 			return createSession;
 		}
 
@@ -102,12 +109,16 @@ namespace NETSIM.Server.Manager
 					_waitPool.Push(item);
 					Interlocked.Increment(ref PoolCount);
 					ServerMeasure.Instance.OnSessionEntityCount(RegistryCount);
+
+					LogView.Instance.WriteLogFile(ELogType.INFO, "SucessSessionDelete");
+					LogView.Instance.WriteLogFile(ELogType.INFO, $"WaitPool : {PoolCount}");
+					LogView.Instance.WriteLogFile(ELogType.INFO, $"LiveSessions : {RegistryCount} ");
+
 				}
 			}
-			catch (Exception ex) 
+			catch (Exception ex)
 			{
-
-				Console.WriteLine($"[Error] : {ex}");
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"{ex}");
 			}
 		}
 	}

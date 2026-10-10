@@ -32,10 +32,11 @@ namespace NETSIM
 				{
 					while (true) { }
 				}
+
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[Error] : {ex}");
+				LogView.Instance.WriteLogFile(ELogType.FATAL, $"{ex}");
 			}
 		}
 	}
