@@ -30,7 +30,7 @@ namespace NETSIM.Server.Function
 
 
 
-		internal PacketSender(SessionManager sessionManager , ModulePipe modulePipe)
+		internal PacketSender(SessionManager sessionManager, ModulePipe modulePipe)
 		{
 			// Local
 			_formatter = new PacketFormatter();
@@ -86,8 +86,8 @@ namespace NETSIM.Server.Function
 			if (resultContext.SendType == ESendType.BROADCAST)
 				Broadcast(resultContext.Packet);
 			if (resultContext.SendType == ESendType.BROADCASTEXCEPT)
-				BroadcastExcept(resultContext.SessionID,resultContext.Packet);
-			
+				BroadcastExcept(resultContext.SessionID, resultContext.Packet);
+
 		}
 
 		private void UniCast(int sessionID, IPacket packet)
@@ -98,8 +98,9 @@ namespace NETSIM.Server.Function
 
 				_sessionManager.TryExcute(sessionID, session =>
 				{
-					_ = session.Send(packetData);
+					session.InputPacketData(packetData);
 				});
+
 			}
 			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 		}
@@ -112,21 +113,20 @@ namespace NETSIM.Server.Function
 
 				_sessionManager.ForEachActionSession(session =>
 				{
-					_ = session.Send(packetData);
+					session.InputPacketData(packetData);
 				});
 			}
 			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 		}
-		
-		private void BroadcastExcept(int exceptSessionID , IPacket packet)
+
+		private void BroadcastExcept(int exceptSessionID, IPacket packet)
 		{
 			try
 			{
 				ReadOnlyMemory<byte> packetData = _formatter.Format(packet);
-
-				_sessionManager.ExceptForAllOtherSessionAction(exceptSessionID , session =>
+				_sessionManager.ExceptForAllOtherSessionAction(exceptSessionID, session =>
 				{
-					_ = session.Send(packetData);
+					session.InputPacketData(packetData);
 				});
 
 			}

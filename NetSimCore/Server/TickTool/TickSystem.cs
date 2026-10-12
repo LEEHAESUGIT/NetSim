@@ -52,13 +52,13 @@ namespace NETSIM.Server.TickTool
 
 				if (_timeDebt > 0)
 				{
-					LogView.Instance.WriteLogFile(ELogType.DEBUG , $"SleepTick TimeDebt : {_timeDebt}");
+					//LogView.Instance.WriteLogFile(ELogType.DEBUG , $"SleepTick TimeDebt : {_timeDebt}");
 					await Task.Delay(TimeSpan.FromMilliseconds(_timeDebt), shutDownToken);
 					_timeDebt = 0;
 				}
 				if (_timeDebt < 0)
 				{
-					LogView.Instance.WriteLogFile(ELogType.WARN, $"OverTickRate! TimeDebt : {_timeDebt}");
+					//LogView.Instance.WriteLogFile(ELogType.WARN, $"OverTickRate! TimeDebt : {_timeDebt}");
 				}
 			}
 		}
@@ -74,7 +74,7 @@ namespace NETSIM.Server.TickTool
 				currentCount++;
 			}
 
-					LogView.Instance.WriteLogFile(ELogType.DEBUG, $"Process Packet Count : {currentCount} ");
+					//LogView.Instance.WriteLogFile(ELogType.DEBUG, $"Process Packet Count : {currentCount} ");
 
 		}
 	}

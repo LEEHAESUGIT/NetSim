@@ -40,7 +40,7 @@ namespace NETSIM.Server.Service
 
 					foreach (Session session in _sessionManager.LiveSessions.Values)
 					{
-						LogView.Instance.WriteLogFile(ELogType.DEBUG , $"{currentTick - session.LastHeartBeatTick}");
+						//LogView.Instance.WriteLogFile(ELogType.DEBUG , $"{currentTick - session.LastHeartBeatTick}");
 						if (currentTick - session.LastHeartBeatTick > 15000) // 15sec == 15000ms
 						{
 							session.Disconnect();

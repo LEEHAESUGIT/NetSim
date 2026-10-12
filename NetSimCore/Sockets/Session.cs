@@ -17,6 +17,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace NETSIM.Sockets
@@ -112,6 +113,8 @@ namespace NETSIM.Sockets
 
 			this._packetBuffer.Recv.Clear();
 
+			ClearSendPipe();
+
 			LastHeartBeatTime = DateTime.MinValue;
 			SessionMeasure.Instance.Clear(SessionID);
 		}
@@ -122,6 +125,7 @@ namespace NETSIM.Sockets
 			SessionMeasure.Instance.OnTimer(this.SessionID);
 			SessionMeasure.Instance.OnSessionID(this.SessionID);
 			SessionMeasure.Instance.OnStateLight(this.SessionID, EStateLight.GREEN);
+			_ = SendLoopAsync();
 			_ = ReceivedLoopAsync();
 		}
 
@@ -133,21 +137,27 @@ namespace NETSIM.Sockets
 
 		}
 
-		internal async Task<bool> Send(ReadOnlyMemory<byte> packetData)
+	
+
+		private Channel<ReadOnlyMemory<byte>> _sendPipe = Channel.CreateUnbounded<ReadOnlyMemory<byte>>();
+		internal bool InputPacketData(ReadOnlyMemory<byte> context) => _sendPipe.Writer.TryWrite(context);
+		private void ClearSendPipe()
 		{
-			try
+			while (_sendPipe.Reader.TryRead(out _)) { }
+		}
+		internal async Task SendLoopAsync()
+		{
+			while(await _sendPipe.Reader.WaitToReadAsync(_loopToken))
 			{
-				if (this._disconnectedLock == 1)
-					return false;
-				await _stream.WriteAsync(packetData);
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[Error] : {ex}");
-				return false;
+				while (_sendPipe.Reader.TryRead(out ReadOnlyMemory<byte> packetData))
+				{
+					if (_disconnectedLock == 1) return;
+
+					await _stream.WriteAsync(packetData);
+				}
 			}
 		}
+
 
 		private async Task ReceivedLoopAsync()
 		{

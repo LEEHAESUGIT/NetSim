@@ -30,7 +30,8 @@ namespace NETSIM
 
 				if (_server.Start())
 				{
-					while (true) { }
+					Console.ReadLine();
+					//while (true) { }
 				}
 
 			}
