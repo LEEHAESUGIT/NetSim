@@ -14,23 +14,6 @@ namespace NETSIM.MetaData.Enum
 		Left = 1 << 2, // 4 (0000 0100) - A, LeftArrow
 		Right = 1 << 3  // 8 (0000 1000) - D, RightArrow
 	}
-
-	internal class MoveFlagWraper
-	{
-		private EMoveDirFlag _moveFlag;
-
-		internal MoveFlagWraper() { }
-
-		internal void Input(EMoveDirFlag flag)
-		{
-			this._moveFlag = flag;
-		}
-		internal EMoveDirFlag Output()
-		{
-			return _moveFlag;
-		}
-	}
-
 }
 
 

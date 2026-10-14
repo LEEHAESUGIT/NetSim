@@ -84,7 +84,8 @@ namespace NETSIM.Server.Module
 				catch (Exception ex)
 				{
 					LogView.Instance.WriteLogFile(ELogType.ERROR, $"Fail Accept Client, {ex}");
-				} }
+				}
+			}
 		}
 	}
 }

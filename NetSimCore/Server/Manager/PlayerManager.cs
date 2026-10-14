@@ -2,6 +2,7 @@
 using NETSIM.Measure;
 using NETSIM.MetaData.Enum;
 using NETSIM.Object;
+using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Sockets;
 using System;
 using System.Collections.Concurrent;
@@ -19,9 +20,6 @@ namespace NETSIM.Server.Manager
 		private Stack<Player> _recyclePool = new Stack<Player>(8);
 		private ConcurrentDictionary<int, Player> _players = new();
 
-
-
-		//private ConcurrentStack<Session> _waitPool = new();
 		internal IReadOnlyDictionary<int, Player> LivePlayers => _players;
 
 		internal int PoolCount = 0;
@@ -117,6 +115,18 @@ namespace NETSIM.Server.Manager
 				action(player);
 			}
 		}
+
+
+		internal List<PlayersPositionSnapshot> ToInterpolation()
+		{
+			List<PlayersPositionSnapshot> _snapshots = new(_players.Count);
+			foreach(var player in _players.Values)
+			{
+				_snapshots.Add(player.Snapshot());
+			}
+			return _snapshots;
+		}
+
 
 
 

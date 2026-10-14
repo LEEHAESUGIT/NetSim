@@ -1,4 +1,7 @@
 ﻿using NETSIM.Context;
+using NETSIM.MetaData.Enum;
+using NETSIM.MetaData.Interface;
+using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Server.Manager;
 using NETSIM.Server.Router;
 using NETSIM.Server.Router.Pipe;
@@ -22,19 +25,22 @@ namespace NETSIM.GameRoom
 		private double _timeDebt = 0;
 		private float _deltaTime;
 
-
-
 		private GamePacketPipe _gamePacketPipe;
 		private GamePacketRouter _gamePacketRouter;
 
-		internal RoomModel(int tickRate, PlayerManager playerManager,  GamePacketPipe gamePacketPipe , GamePacketRouter gamePacketRouter)
+
+		// Interpolation
+		private int _tickCount = 0;
+
+
+		internal RoomModel(int tickRate, GamePacketPipe gamePacketPipe, PlayerManager playerManager, GamePacketRouter gamePacketRouter)
 		{
 			this._tickRate = tickRate;
 			this._deltaTime = 1f / tickRate;
 			this._targetTickMS = _oneSecMS / _tickRate;
 
-			this._playerManager = playerManager;
 			this._gamePacketPipe = gamePacketPipe;
+			this._playerManager = playerManager;
 			this._gamePacketRouter = gamePacketRouter;
 		}
 
@@ -44,7 +50,7 @@ namespace NETSIM.GameRoom
 			_ = TickRateUpdateAsync(shutDownToken);
 		}
 
-	
+
 		/// <summary>
 		/// 임시 TickRate 로직
 		/// TODO:
@@ -64,6 +70,12 @@ namespace NETSIM.GameRoom
 				GameLogicUpdate();
 				sw.Stop();
 
+				if(_tickCount == 10)
+				{
+					PlayerTransformInterPolation();
+					Interlocked.Exchange(ref _tickCount, 0);	
+				}
+
 				double workTimeMS = sw.Elapsed.TotalMilliseconds;
 
 				double timeDifference = _targetTickMS - workTimeMS;
@@ -79,6 +91,8 @@ namespace NETSIM.GameRoom
 				{
 					//LogView.Instance.WriteLogFile(ELogType.WARN, $"OverTickRate! TimeDebt : {_timeDebt}");
 				}
+
+				Interlocked.Increment(ref _tickCount);
 			}
 		}
 
@@ -92,25 +106,43 @@ namespace NETSIM.GameRoom
 				_gamePacketRouter.Apply(context);
 				currentCount++;
 			}
-
-			//LogView.Instance.WriteLogFile(ELogType.DEBUG, $"Process Packet Count : {currentCount} ");
-
 		}
-
 
 		private void GameLogicUpdate()
 		{
-
 			// Move	
-			foreach(var player in _playerManager.LivePlayers.Values)
+			foreach (var player in _playerManager.LivePlayers.Values)
 			{
 				player.UpdateLocation(_deltaTime);
-			}
 
+				if (player.NewMoveDirFlag != player.LastMoveDirFlag)
+				{
+
+					_gamePacketPipe.OutBoundPipe.TryWrite(
+						new ResultPacketContext(
+							ESendType.BROADCASTEXCEPT,
+							player.ControllHaveSessionID,
+							new S2C_MovePacket(player.PlayerID, player.NewMoveDirFlag)
+							));
+
+					player.SyncLastMoveFlag();
+				}
+			}
 		}
 
+		private void PlayerTransformInterPolation()
+		{
+			if (_playerManager.LivePlayersCount == 0)
+				return;
 
-
+			_gamePacketPipe.OutBoundPipe.TryWrite(
+				new ResultPacketContext(
+					ESendType.BROADCAST,
+					-1,
+					new S2C_TransformInterpolationPacket(
+						_playerManager.ToInterpolation()
+						)));
+		}
 
 	}
 }

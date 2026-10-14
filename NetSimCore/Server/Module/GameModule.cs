@@ -24,7 +24,7 @@ namespace NETSIM.Server.Module
 		private PlayerManager _playerManager;
 
 		// Pipe
-		private GamePacketPipe _gamePacketPipe;		
+		private GamePacketPipe _gamePacketPipe;
 		// Service
 		private PlayerLifeCycleService _playerLifeCycleService;
 		//private GamePacketApplyService _gamePacketApplyService;
@@ -38,14 +38,14 @@ namespace NETSIM.Server.Module
 		private RoomModel _gameRoomModel;
 
 
-		internal GameModule(GamePacketPipe gamePacketPipe , CancellationTokenSource serverCTS)
+		internal GameModule(GamePacketPipe gamePacketPipe, CancellationTokenSource serverCTS)
 		{
 			//	Local
 			this._cts = serverCTS;
 
 			// Manager
 			this._playerManager = new PlayerManager();
-			
+
 			// Pipe
 			this._gamePacketPipe = gamePacketPipe;
 
@@ -55,7 +55,7 @@ namespace NETSIM.Server.Module
 			this._gamePacketRouter = new GamePacketRouter(_gamePacketRouterInit.InitIngamePacketRouter());
 
 
-			this. _gameRoomModel = new RoomModel(64 , _playerManager , _gamePacketPipe , _gamePacketRouter);	
+			this._gameRoomModel = new RoomModel(64, _gamePacketPipe, _playerManager, _gamePacketRouter);
 			// Service
 			this._playerLifeCycleService = new PlayerLifeCycleService(_playerManager);
 			//this._gamePacketApplyService = new GamePacketApplyService(_playerManager , _gamePacketPipe);

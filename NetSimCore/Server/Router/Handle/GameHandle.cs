@@ -69,24 +69,14 @@ namespace NETSIM.Server.Router.Handle
 			if (context.Packet is C2S_MovePacket Packet)
 			{
 
-				if(_playerManager.TryGetPlayer(Packet.PlayerID , out Player player))
+				if (_playerManager.TryGetPlayer(Packet.PlayerID, out Player player))
 				{
-					if (player.MoveDirFlag == Packet.MoveFlag)
+					if (player.NewMoveDirFlag == Packet.MoveFlag)
 						return;
 					else
 						player.UpdateMoveFlag(Packet.MoveFlag);
 				}
-
-
-
-
-
-
-
-				//_playerManager.TryExcute(Packet.PlayerID, player =>
-				//{
-				//});
-				SessionMeasure.Instance.OnGameCommand(context.SessionID, "Move");
+				SessionMeasure.Instance.OnGameCommand(context.SessionID, $"Move{Packet.MoveFlag.ToString()}");
 
 			}
 

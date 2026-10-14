@@ -19,6 +19,7 @@ using NETSIM.Server.Router.Pipe;
 using NETSIM.Server.Router.Init;
 using NETSIM.Server.Module;
 using NETSIM_ConsoleView.LogMonitor;
+using NETSIM.Mapper;
 
 
 namespace NETSIM.Server
@@ -27,13 +28,15 @@ namespace NETSIM.Server
 	{
 		private CancellationTokenSource _serverCTS;
 
-
+		// Pipe
 		private ModulePipe _modulePipe;
-
+		
+		// Module
 		private NetworkModule _networkModule;
 		private GameModule _gameModule;
 		private MeasureModule _measureModule;
 
+		// Local
 		private bool _isRunning = false;
 
 
@@ -42,10 +45,11 @@ namespace NETSIM.Server
 			this._serverCTS = serverCTS;
 
 			this._modulePipe = new ModulePipe();
-
+			
 			this._networkModule = new NetworkModule(portNum, _modulePipe, _serverCTS);
 			this._gameModule = new GameModule(_modulePipe.GamePacketPipe, _serverCTS);
 			this._measureModule = new MeasureModule(_serverCTS);
+
 
 		}
 		internal bool Start()
@@ -61,13 +65,13 @@ namespace NETSIM.Server
 				ServerMeasure.Instance.OnStateLight(EStateLight.GREEN);
 				ServerMeasure.Instance.OnServerIsRunning(_isRunning);
 
-				LogView.Instance.WriteLogFile(ELogType.INFO , $"---------------------SERVER START---------------------");
+				LogView.Instance.WriteLogFile(ELogType.INFO, $"---------------------SERVER START---------------------");
 
 				return true;
 			}
 			catch (Exception ex)
 			{
-				LogView.Instance.WriteLogFile(ELogType.FATAL , $" FailServerStart , error : {ex}");
+				LogView.Instance.WriteLogFile(ELogType.FATAL, $" FailServerStart , error : {ex}");
 				return false;
 			}
 		}
@@ -84,7 +88,7 @@ namespace NETSIM.Server
 				ServerMeasure.Instance.OnStateLight(EStateLight.RED);
 				ServerMeasure.Instance.OffTimer();
 
-				LogView.Instance.WriteLogFile(ELogType.INFO , $"---------------------SERVER STOP---------------------");
+				LogView.Instance.WriteLogFile(ELogType.INFO, $"---------------------SERVER STOP---------------------");
 				return true;
 			}
 			catch (Exception ex)
