@@ -1,5 +1,10 @@
-﻿using NETSIM.MetaData.Interface;
+﻿using NETSIM.GameRoom;
+using NETSIM.MetaData.Interface;
+using NETSIM.Server.Function;
 using NETSIM.Server.Manager;
+using NETSIM.Server.Router;
+using NETSIM.Server.Router.Handle;
+using NETSIM.Server.Router.Init;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.Server.Service;
 using System;
@@ -22,8 +27,15 @@ namespace NETSIM.Server.Module
 		private GamePacketPipe _gamePacketPipe;		
 		// Service
 		private PlayerLifeCycleService _playerLifeCycleService;
-		private GamePacketApplyService _gamePacketApplyService;
+		//private GamePacketApplyService _gamePacketApplyService;
 
+		// Router
+		private GameHandle _gameHandle;
+		private GamePacketRouter _gamePacketRouter;
+		private GamePacketRouterInit _gamePacketRouterInit;
+
+		// Room
+		private RoomModel _gameRoomModel;
 
 
 		internal GameModule(GamePacketPipe gamePacketPipe , CancellationTokenSource serverCTS)
@@ -37,16 +49,23 @@ namespace NETSIM.Server.Module
 			// Pipe
 			this._gamePacketPipe = gamePacketPipe;
 
+
+			this._gameHandle = new GameHandle(_playerManager, _gamePacketPipe);
+			this._gamePacketRouterInit = new GamePacketRouterInit(_gameHandle);
+			this._gamePacketRouter = new GamePacketRouter(_gamePacketRouterInit.InitIngamePacketRouter());
+
+
+			this. _gameRoomModel = new RoomModel(64 , _playerManager , _gamePacketPipe , _gamePacketRouter);	
 			// Service
 			this._playerLifeCycleService = new PlayerLifeCycleService(_playerManager);
-			this._gamePacketApplyService = new GamePacketApplyService(_playerManager , _gamePacketPipe);
+			//this._gamePacketApplyService = new GamePacketApplyService(_playerManager , _gamePacketPipe);
 
 		}
 		public void Start()
 		{
-			_gamePacketApplyService.Start(_cts.Token);
+			//_gamePacketApplyService.Start(_cts.Token);
 
-
+			_gameRoomModel.Start(_cts.Token);
 
 		}
 

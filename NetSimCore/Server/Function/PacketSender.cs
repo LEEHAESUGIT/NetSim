@@ -103,6 +103,7 @@ namespace NETSIM.Server.Function
 
 			}
 			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
+
 		}
 
 		private void Broadcast(IPacket packet)

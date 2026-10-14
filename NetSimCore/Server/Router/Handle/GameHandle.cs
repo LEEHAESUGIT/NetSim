@@ -2,6 +2,7 @@
 using NETSIM.Measure;
 using NETSIM.MetaData.Enum;
 using NETSIM.MetaData.Interface;
+using NETSIM.Object;
 using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Server.Function;
 using NETSIM.Server.Manager;
@@ -28,12 +29,12 @@ namespace NETSIM.Server.Router.Handle
 		private PlayerIssuance _playerIssuance;
 
 
-		internal GameHandle(PlayerManager playerManager, GamePacketPipe gamePacketPipe, PlayerIssuance playerIssuance)
+		internal GameHandle(PlayerManager playerManager, GamePacketPipe gamePacketPipe)
 		{
 			this._playerManager = playerManager;
 			this._gamePacketPipe = gamePacketPipe;
 
-			this._playerIssuance = playerIssuance;
+			this._playerIssuance = new PlayerIssuance();
 		}
 
 		internal void SpawnRequestHandle(ReceivePacketContext context)
@@ -65,19 +66,30 @@ namespace NETSIM.Server.Router.Handle
 
 		internal void PlayerMoveHandle(ReceivePacketContext context)
 		{
-			//using (new ExecutionTimeProfiler($"PlayerMoveHandle"))
-			//{
-				if (context.Packet is C2S_MovePacket Packet)
+			if (context.Packet is C2S_MovePacket Packet)
+			{
+
+				if(_playerManager.TryGetPlayer(Packet.PlayerID , out Player player))
 				{
-
-					_gamePacketPipe.OutBoundPipe.TryWrite(
-						new ResultPacketContext(ESendType.BROADCASTEXCEPT, context.SessionID,
-						new S2C_MovePacket(Packet.PlayerID, Packet.MoveFlag, Packet.PosX, Packet.PosZ))
-						);
-					SessionMeasure.Instance.OnGameCommand(context.SessionID, "Move");
-
+					if (player.MoveDirFlag == Packet.MoveFlag)
+						return;
+					else
+						player.UpdateMoveFlag(Packet.MoveFlag);
 				}
-		//	}
+
+
+
+
+
+
+
+				//_playerManager.TryExcute(Packet.PlayerID, player =>
+				//{
+				//});
+				SessionMeasure.Instance.OnGameCommand(context.SessionID, "Move");
+
+			}
+
 		}
 
 

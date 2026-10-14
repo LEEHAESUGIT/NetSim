@@ -70,7 +70,7 @@ namespace NETSIM.Server.Manager
 				createPlayer = new Player(new DefaultPlayer());
 			}
 
-			createPlayer.Init(issuanceID, sessionID, color);
+			createPlayer.Init(issuanceID, sessionID, color , new DefaultPlayer().MoveSpeed);
 
 			_players.TryAdd(issuanceID, createPlayer);
 			Interlocked.Increment(ref LivePlayersCount);
@@ -84,5 +84,41 @@ namespace NETSIM.Server.Manager
 				PushRecyclePlayerObject(playerID);
 			}
 		}
+
+
+		internal bool TryGetPlayer(int playerID, out Player player)
+		{
+			return _players.TryGetValue(playerID, out player);
+		}
+		internal bool TryExcute(int playerID, Action<Player> action)
+		{
+			if (_players.TryGetValue(playerID, out var player))
+			{
+				action(player);
+				return true;
+			}
+			return false;
+		}
+		internal void ForEachActionPlayer(Action<Player> foreachAction)
+		{
+			foreach (var player in _players.Values)
+			{
+				foreachAction(player);
+			}
+		}
+
+		internal void ExceptForAllOtherPlayerAction(int exceptPlayerID, Action<Player> action)
+		{
+			foreach (var player in _players.Values)
+			{
+				if (player.PlayerID == exceptPlayerID)
+					continue;
+
+				action(player);
+			}
+		}
+
+
+
 	}
 }

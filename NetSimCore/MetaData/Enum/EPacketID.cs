@@ -17,8 +17,11 @@ namespace NETSIM.MetaData.Enum
 		S_Spawn = 1,
 		S_Move = 2,
 
+		S_Transform = 11,
+
 		C_Spawn = 51,
 		C_Move = 52,
+
 		#endregion
 
 		#region SystemPacketID
