@@ -5,6 +5,7 @@ using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Server.Manager;
 using NETSIM.Server.Router;
 using NETSIM.Server.Router.Pipe;
+using NETSIM_ConsoleView.LogMonitor;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -24,6 +25,9 @@ namespace NETSIM.GameRoom
 		private readonly double _targetTickMS;
 		private double _timeDebt = 0;
 		private float _deltaTime;
+
+		private readonly double _maxAllowedDebtMS = -100.0;
+
 
 		private GamePacketPipe _gamePacketPipe;
 		private GamePacketRouter _gamePacketRouter;
@@ -89,9 +93,14 @@ namespace NETSIM.GameRoom
 				}
 				if (_timeDebt < 0)
 				{
-					//LogView.Instance.WriteLogFile(ELogType.WARN, $"OverTickRate! TimeDebt : {_timeDebt}");
-				}
+					// TODO : 과도한 debt 에서 바져나오는 로직 필요 
+					if (_timeDebt < _maxAllowedDebtMS)
+					{
 
+						LogView.Instance.WriteLogFile(ELogType.WARN, $"OverTickRate! TimeDebt : {_timeDebt}");
+						_timeDebt = 0;
+					}
+				}
 				Interlocked.Increment(ref _tickCount);
 			}
 		}
