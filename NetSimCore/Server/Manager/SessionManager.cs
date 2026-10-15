@@ -34,7 +34,7 @@ namespace NETSIM.Server.Manager
 				_waitPool.Push(new Session(i));
 				Interlocked.Increment(ref PoolCount);
 			}
-			LogView.Instance.WriteLogFile(ELogType.INFO , $"SessionManager fill WaitPool. Now WaitPoolCount: {PoolCount}");
+			LogView.Instance.WriteLogFile(ELogType.INFO, $"SessionManager fill WaitPool. Now WaitPoolCount: {PoolCount}");
 		}
 
 		#region Function
@@ -59,9 +59,9 @@ namespace NETSIM.Server.Manager
 			}
 		}
 
-		internal void ExceptForAllOtherSessionAction(int exceptSessionID , Action<Session> action)
+		internal void ExceptForAllOtherSessionAction(int exceptSessionID, Action<Session> action)
 		{
-			foreach(var session in _sessions.Values)
+			foreach (var session in _sessions.Values)
 			{
 				if (session.SessionID == exceptSessionID)
 					continue;
@@ -74,9 +74,9 @@ namespace NETSIM.Server.Manager
 		#endregion
 
 
-		internal Session CreateSession()
+		internal void ActivationSession(TcpClient client, ModulePipe modulePipe, CancellationToken shutDownToken)
 		{
-			Session? createSession = null;
+			//Session? createSession = null;
 			if (_waitPool.TryPop(out Session? item))
 			{
 				Interlocked.Decrement(ref PoolCount);
@@ -85,18 +85,18 @@ namespace NETSIM.Server.Manager
 				{
 					Interlocked.Increment(ref RegistryCount);
 					ServerMeasure.Instance.OnSessionEntityCount(RegistryCount);
-					createSession = item;
+
+					item.Init(client, modulePipe, shutDownToken);
+					item.Start();
 				}
 			}
 
-			LogView.Instance.WriteLogFile(ELogType.INFO , "SucessSessionCreate");
-			LogView.Instance.WriteLogFile(ELogType.INFO , $"WaitPool : {PoolCount}");
-			LogView.Instance.WriteLogFile(ELogType.INFO , $"LiveSessions : {RegistryCount} ");
-
-			return createSession;
+			LogView.Instance.WriteLogFile(ELogType.INFO, "SucessSessionCreate");
+			LogView.Instance.WriteLogFile(ELogType.INFO, $"WaitPool : {PoolCount}");
+			LogView.Instance.WriteLogFile(ELogType.INFO, $"LiveSessions : {RegistryCount} ");
 		}
 
-		internal void DeleteSession(int sessionID)
+		internal void DeactivationSession(int sessionID)
 		{
 			try
 			{

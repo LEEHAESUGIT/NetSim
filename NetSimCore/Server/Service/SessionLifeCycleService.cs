@@ -43,40 +43,32 @@ namespace NETSIM.Server.Service
 						//LogView.Instance.WriteLogFile(ELogType.DEBUG , $"{currentTick - session.LastHeartBeatTick}");
 						if (currentTick - session.LastHeartBeatTick > 15000) // 15sec == 15000ms
 						{
-							session.Disconnect();
+							OnSessionDisconnected(session.SessionID);
 						}
 					}
 				}
 			}
 			catch (Exception ex)
 			{
-				LogView.Instance.WriteLogFile(ELogType.ERROR , $"SessionHeartbeatCycle error:{ex}");
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"SessionHeartbeatCycle error:{ex}");
 			}
 		}
 
 
 		internal void OnSessionConnected(TcpClient client, ModulePipe modulePipe, CancellationToken serverShutDownToken)
 		{
-
-			Session session = _sessionManager.CreateSession();
-
 			try
 			{
-				if (session != null)
-				{
-					session.OnDisconnected = OnSessionDisconnected;
-					session.Init(client, modulePipe, serverShutDownToken);
-					session.Start();
-				}
+				_sessionManager.ActivationSession(client, modulePipe, serverShutDownToken);
 			}
-			catch (Exception ex) 
+			catch (Exception ex)
 			{
 				LogView.Instance.WriteLogFile(ELogType.ERROR, $"OnSessionConnected error:{ex}");
 			}
 		}
 		internal void OnSessionDisconnected(int sessionID)
 		{
-			_sessionManager.DeleteSession(sessionID);
+			_sessionManager.DeactivationSession(sessionID);
 		}
 
 

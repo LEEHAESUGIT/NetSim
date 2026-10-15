@@ -14,9 +14,5 @@ namespace Shared.Configration
 
 		public const int SessionMin = 0;
 		public const int SessionMax = 8;
-
-
-
-
 	}
 }

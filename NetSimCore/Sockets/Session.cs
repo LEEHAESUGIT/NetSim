@@ -25,9 +25,15 @@ namespace NETSIM.Sockets
 	internal class Session
 	{
 		// Local
-		private int _disconnectedLock = 0; // 1 일때 lock
+		private TcpClient _client;
+		private NetworkStream _stream;
 		private PacketBufferSystem _packetBuffer;
 		private PacketFormatter _formatter;
+
+		private int _disconnectedLock = 0; // 1 일때 lock
+		internal int SessionID { get; init; }
+		internal DateTime LastHeartBeatTime { get; set; }
+		internal long LastHeartBeatTick { get; set; }
 
 		// Token
 		private CancellationTokenSource _linkedCts;
@@ -37,20 +43,6 @@ namespace NETSIM.Sockets
 		// Pipe
 		private ModulePipe _modulePipe;
 
-		private TcpClient _client;
-		private NetworkStream _stream;
-
-
-
-
-
-		internal DateTime LastHeartBeatTime { get; set; }
-		internal long LastHeartBeatTick { get; set; }
-
-
-
-		internal int SessionID { get; init; }
-		//internal int PlayerID { get; private set; }
 
 		internal Action<int> OnDisconnected;
 
@@ -145,7 +137,7 @@ namespace NETSIM.Sockets
 		{
 			while (_sendPipe.Reader.TryRead(out _)) { }
 		}
-		internal async Task SendLoopAsync()
+		private async Task SendLoopAsync()
 		{
 			while(await _sendPipe.Reader.WaitToReadAsync(_loopToken))
 			{
