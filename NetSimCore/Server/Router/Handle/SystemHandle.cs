@@ -5,6 +5,7 @@ using NETSIM.Packet.Packets.ForSystem;
 using NETSIM.Server.Manager;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.Sockets;
+using NETSIM_ConsoleView.LogMonitor;
 using Shared.ExecutionTimeMeasureTool;
 using System;
 using System.Collections.Generic;
@@ -58,6 +59,7 @@ namespace NETSIM.Server.Router.Handle
 					SessionMeasure.Instance.OnPing(context.SessionID, (int)ping);
 				}
 
+				//LogView.Instance.WriteLogFile(ELogType.INFO , $"HeartBeatPacket");
 				_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
 					new S2C_HeartBeat(nowTimeTypeLong, nowTick, Packet.WasSendTime)));
 			}
@@ -67,6 +69,7 @@ namespace NETSIM.Server.Router.Handle
 		{
 			if (context.Packet is C2S_InitRequest Packet)
 			{
+				//LogView.Instance.WriteLogFile(ELogType.INFO , $"InitSessionPacket");
 				_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
 					new S2C_InitResponse(context.SessionID)));
 

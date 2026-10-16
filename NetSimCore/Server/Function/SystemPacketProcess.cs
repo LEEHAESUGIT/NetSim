@@ -4,6 +4,7 @@ using NETSIM.Server.Router;
 using NETSIM.Server.Router.Handle;
 using NETSIM.Server.Router.Init;
 using NETSIM.Server.Router.Pipe;
+using NETSIM_ConsoleView.LogMonitor;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,35 +21,29 @@ namespace NETSIM.Server.Function
 		// Pipe
 		private ModulePipe _modulePipe;
 
+		// Router
 		private SystemHandle _systemHandle;
 		private SystemPacketRouter _systemPacketRouter;
 		private SystemPacketRouterInit _systemPacketRouterInit;
 
-
-		
 		internal SystemPacketProcess(SessionManager sessionManager, ModulePipe modulePipe)
 		{
 			// Manager
-			_sessionManager = sessionManager;
+			this._sessionManager = sessionManager;
 
 			// Pipe
-			_modulePipe = modulePipe;
+			this._modulePipe = modulePipe;
 
-			_systemHandle = new SystemHandle(_sessionManager, _modulePipe.SystemPacketPipe);
-			_systemPacketRouterInit = new SystemPacketRouterInit(_systemHandle);
-			_systemPacketRouter = new SystemPacketRouter(_systemPacketRouterInit.InitSystemPacketRouter());
-
-
-			
+			// Router
+			this._systemHandle = new SystemHandle(_sessionManager, _modulePipe.SystemPacketPipe);
+			this._systemPacketRouterInit = new SystemPacketRouterInit(_systemHandle);
+			this._systemPacketRouter = new SystemPacketRouter(_systemPacketRouterInit.InitSystemPacketRouter());
 		}
-
 
 		internal void Start(CancellationToken shutDownToken)
 		{
 			_ = SystemProcessLoopAsync(shutDownToken);
 		}
-
-
 
 		private async Task SystemProcessLoopAsync(CancellationToken shutDownToken)
 		{
@@ -68,7 +63,10 @@ namespace NETSIM.Server.Function
 					}
 				}
 			}
-			catch (Exception ex ) { Console.WriteLine($"[Error] : {ex}"); }
+			catch (Exception ex ) 
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR , $"SysteProcessLoop Error : {ex}");
+			}
 		}
 
 

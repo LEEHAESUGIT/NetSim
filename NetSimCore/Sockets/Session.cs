@@ -5,6 +5,7 @@ using NETSIM.Packet.Packets;
 using NETSIM.Packet.Tool;
 using NETSIM.Server.Router.Pipe;
 using NETSIM.System.Buffer;
+using NETSIM_ConsoleView.LogMonitor;
 using Shared.Configration;
 using Shared.Enum;
 using System;
@@ -79,6 +80,7 @@ namespace NETSIM.Sockets
 
 			try
 			{
+				LogView.Instance.WriteLogFile(ELogType.INFO , $"PlayerDisconnect {this.SessionID}");
 				_sessionCts?.Cancel();
 
 				Stop();
@@ -167,6 +169,7 @@ namespace NETSIM.Sockets
 					int received = await _stream.ReadAsync(_packetBuffer.Recv.WriteSpace, _loopToken);
 					if (received <= 0 || _disconnectedLock == 1)
 					{
+						LogView.Instance.WriteLogFile(ELogType.WARN , $"received packet is small than zero. ID : {SessionID} , size : {received}");
 						Disconnect();
 						break;
 					}
@@ -182,10 +185,12 @@ namespace NETSIM.Sockets
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[수신 에러] SessionID: {SessionID}, 원인: {ex.Message}");
+				//Console.WriteLine($"[수신 에러] SessionID: {SessionID}, 원인: {ex.Message}");
+				LogView.Instance.WriteLogFile(ELogType.ERROR , $"[수신 에러] SessionID: {SessionID}, 원인: {ex.Message}");
 			}
 			finally
 			{
+				LogView.Instance.WriteLogFile(ELogType.INFO , $"Token Close {SessionID}");
 				Disconnect();
 			}
 		}
@@ -202,6 +207,7 @@ namespace NETSIM.Sockets
 
 				if (PacketSize >= ServerConfigurationData.MaxPacketSize)
 				{
+					LogView.Instance.WriteLogFile(ELogType.WARN , $"packetsize >= MaxPacketSize {SessionID}");
 					Disconnect();
 					return;
 				}
@@ -216,6 +222,7 @@ namespace NETSIM.Sockets
 				}
 				else
 				{
+					LogView.Instance.WriteLogFile(ELogType.WARN , $"Failed Packet Parse{SessionID}");
 					Disconnect();
 					return;
 				}

@@ -15,13 +15,6 @@ namespace NETSIM.Object
 {
 	internal class Player
 	{
-		// PlayerID
-		// Position
-		// Direction
-		// MoveSpeed
-
-		// IsPlayable
-
 		internal int PlayerID { get; private set; }
 
 		internal float MoveSpeed { get; private set; }

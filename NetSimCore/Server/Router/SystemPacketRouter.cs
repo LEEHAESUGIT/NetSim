@@ -1,7 +1,6 @@
 ﻿using NETSIM.Context;
 using NETSIM.MetaData.Enum;
 using NETSIM.MetaData.Interface;
-using NETSIM.Packet.Packets.ClientToServerPacket;
 using NETSIM.Server.Manager;
 using System;
 using System.Collections.Frozen;

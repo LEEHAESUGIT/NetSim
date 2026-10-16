@@ -9,7 +9,7 @@ namespace NETSIM.MetaData.Interface
 	internal interface IModule
 	{
 		void Start();
-		void Stop();
+		//void Stop();
 	}
 
 }

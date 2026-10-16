@@ -43,7 +43,7 @@ namespace NETSIM.Server.Router.Handle
 			using (new ExecutionTimeProfiler($"SpawnRequestHandle"))
 			{
 
-				if (context.Packet is C2S_SpawnRequest Packet)
+				if (context.Packet is C2S_PlayableObjectSpawnRequest Packet)
 				{
 					SessionMeasure.Instance.OnGameCommand(context.SessionID, "SpawnRequest");
 
@@ -55,13 +55,21 @@ namespace NETSIM.Server.Router.Handle
 						SessionMeasure.Instance.OnPlayerID(context.SessionID, issuanceID);
 						SessionMeasure.Instance.OnPlayerColor(context.SessionID, issuanceColor);
 						_gamePacketPipe.OutBoundPipe.TryWrite(
-							new ResultPacketContext(ESendType.UNICAST, context.SessionID,
-							new S2C_SpawnResponse(context.SessionID, issuanceID, (int)issuanceColor)));
+							new ResultPacketContext(
+								ESendType.UNICAST,
+								context.SessionID,
+								new S2C_PlayableObjectSpawnResponse(context.SessionID, issuanceID, (int)issuanceColor)
+								));
+						_gamePacketPipe.OutBoundPipe.TryWrite(
+							new ResultPacketContext(
+								ESendType.BROADCASTEXCEPT,
+								context.SessionID,
+								new S2C_NonPlayableObjectSpawnResponse(context.SessionID , issuanceID , (int)issuanceColor)
+								));
+
 					}
 				}
-
 			}
-
 		}
 
 		internal void PlayerMoveHandle(ReceivePacketContext context)

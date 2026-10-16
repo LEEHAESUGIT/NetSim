@@ -28,8 +28,6 @@ namespace NETSIM.Server.Function
 		// Pipe
 		private ModulePipe _modulePipe;
 
-
-
 		internal PacketSender(SessionManager sessionManager, ModulePipe modulePipe)
 		{
 			// Local
@@ -63,6 +61,7 @@ namespace NETSIM.Server.Function
 				}
 			}
 		}
+
 		private async Task GameSendLoopAsync(CancellationToken shutDownToken)
 		{
 			while (!shutDownToken.IsCancellationRequested)
@@ -76,8 +75,6 @@ namespace NETSIM.Server.Function
 				}
 			}
 		}
-
-
 
 		private void SendBranch(ResultPacketContext resultContext)
 		{

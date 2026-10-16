@@ -26,7 +26,6 @@ namespace NETSIM.Server.Module
 		// Pipe
 		private ModulePipe _moudlePipe;
 
-
 		// Service
 		private SessionLifeCycleService _sessionLifeCycleService;
 		private PacketService _packetService;
@@ -46,7 +45,6 @@ namespace NETSIM.Server.Module
 			// Service
 			this._sessionLifeCycleService = new SessionLifeCycleService(_sessionManager);
 			this._packetService = new PacketService(_sessionManager, _moudlePipe);
-
 		}
 
 		public void Start()
@@ -56,8 +54,6 @@ namespace NETSIM.Server.Module
 			this._packetService.Start(_cts.Token);
 
 			_ = AcceptLoopAsync(_cts.Token);
-
-
 		}
 
 		public void Stop()
@@ -65,7 +61,6 @@ namespace NETSIM.Server.Module
 			this._listner.Stop();
 			this._cts.Cancel();
 		}
-
 
 		public async Task AcceptLoopAsync(CancellationToken ct)
 		{

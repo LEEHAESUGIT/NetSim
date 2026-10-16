@@ -44,6 +44,7 @@ namespace NETSIM.Server.Service
 						if (currentTick - session.LastHeartBeatTick > 15000) // 15sec == 15000ms
 						{
 							OnSessionDisconnected(session.SessionID);
+							LogView.Instance.WriteLogFile(ELogType.INFO, $"Session Heartbeat Timer Over. Session : {session.SessionID}");
 						}
 					}
 				}

@@ -1,7 +1,6 @@
 ﻿using NETSIM.MetaData.Enum;
 using NETSIM.MetaData.Interface;
 using NETSIM.Packet.Packets;
-using NETSIM.Packet.Packets.ClientToServerPacket;
 using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Packet.Packets.ForSystem;
 using System;
@@ -106,7 +105,7 @@ namespace NETSIM.Packet.Tool
 			// TODO: [Perf Optimization]
 			// 현재 Func<PacketReader, IPacket> 반환 시 struct -> interface 캐스팅으로 인한 Boxing(GC Alloc) 발생 중.
 			// 추후 Action<Session, PacketReader> 기반의 In-place 파싱 및 핸들러 직접 호출 구조로 전환하여 제로 알로케이션 달성할 것.
-			tempInitParseMap.Add(EPacketID.C_Spawn, (_packetReader) => C2S_SpawnRequest.Deserialize(_packetReader));
+			tempInitParseMap.Add(EPacketID.C_PlayableObjectSpawn, (_packetReader) => C2S_PlayableObjectSpawnRequest.Deserialize(_packetReader));
 			tempInitParseMap.Add(EPacketID.C_Move, (_packetReader) => C2S_MovePacket.Deserialize(_packetReader));
 
 

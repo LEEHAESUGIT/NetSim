@@ -20,7 +20,6 @@ namespace NETSIM.Server.Service
 		// Pipe
 		private ModulePipe _modulePipe;
 
-
 		// Function
 		private PacketSender _packetSender;
 		private SystemPacketProcess _systemPacketProcess;
@@ -36,8 +35,6 @@ namespace NETSIM.Server.Service
 			// Function
 			this._packetSender = new PacketSender(_sessionManager, _modulePipe);
 			this._systemPacketProcess = new SystemPacketProcess(_sessionManager, _modulePipe);
-
-
 		}
 
 		internal void Start(CancellationToken shutDownToken)
@@ -45,9 +42,5 @@ namespace NETSIM.Server.Service
 			this._packetSender.Start(shutDownToken);
 			this._systemPacketProcess.Start(shutDownToken);
 		}
-
-
-
-
 	}
 }

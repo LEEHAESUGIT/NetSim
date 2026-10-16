@@ -10,7 +10,6 @@ namespace NETSIM.GameRoom.Function
 {
 	internal class MoveConverter
 	{
-
 		private static readonly Vector3[] _moveDirLookUp = new Vector3[16];
 		
 		static MoveConverter()
@@ -37,15 +36,9 @@ namespace NETSIM.GameRoom.Function
 			}
 		}
 
-
 		internal static Vector3 ToDirection(EMoveDirFlag flag)
 		{
 			return _moveDirLookUp[(byte)flag & 0x0f];
 		}
-
-
-
-
-
 	}
 }

@@ -27,7 +27,6 @@ namespace NETSIM.Server.Module
 		private GamePacketPipe _gamePacketPipe;
 		// Service
 		private PlayerLifeCycleService _playerLifeCycleService;
-		//private GamePacketApplyService _gamePacketApplyService;
 
 		// Router
 		private GameHandle _gameHandle;
@@ -58,30 +57,10 @@ namespace NETSIM.Server.Module
 			this._gameRoomModel = new RoomModel(64, _gamePacketPipe, _playerManager, _gamePacketRouter);
 			// Service
 			this._playerLifeCycleService = new PlayerLifeCycleService(_playerManager);
-			//this._gamePacketApplyService = new GamePacketApplyService(_playerManager , _gamePacketPipe);
-
 		}
 		public void Start()
 		{
-			//_gamePacketApplyService.Start(_cts.Token);
-
 			_gameRoomModel.Start(_cts.Token);
-
-		}
-
-		public void Stop()
-		{
-
-		}
-
-		public void WireEvents()
-		{
-
-		}
-
-		public void PipeWire()
-		{
-
 		}
 	}
 }

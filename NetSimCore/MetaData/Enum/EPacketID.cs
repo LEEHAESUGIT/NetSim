@@ -14,14 +14,15 @@ namespace NETSIM.MetaData.Enum
 		#region IngamePacketID
 		// Ingame 대역폭
 		// 1 ~ 100
-		S_Spawn = 1,
-		S_Move = 2,
+		S_PlayableObjectSpawn = 1,
+		S_NonPlayableObjectSpawn = 2,
+		S_Move = 5,
 
 		S_Transform = 11,
 
-		C_Spawn = 51,
-		C_Move = 52,
-
+		C_PlayableObjectSpawn = 51,
+		C_NonPlayableObjectSpawn = 52,
+		C_Move = 55,
 		#endregion
 
 		#region SystemPacketID
