@@ -1,6 +1,7 @@
 ﻿using NETSIM.Context;
 using NETSIM.MetaData.Enum;
 using NETSIM.MetaData.Interface;
+using NETSIM.Object;
 using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Server.Manager;
 using NETSIM.Server.Router;
@@ -120,7 +121,7 @@ namespace NETSIM.GameRoom
 		private void GameLogicUpdate()
 		{
 			// Move	
-			foreach (var player in _playerManager.LivePlayers.Values)
+			foreach (Player player in _playerManager.LivePlayers.Values)
 			{
 				player.UpdateLocation(_deltaTime);
 
@@ -149,7 +150,7 @@ namespace NETSIM.GameRoom
 					ESendType.BROADCAST,
 					-1,
 					new S2C_TransformInterpolationPacket(
-						_playerManager.ToInterpolation()
+						_playerManager.CaptureSnapshot()
 						)));
 		}
 

@@ -104,15 +104,14 @@ namespace NETSIM_ConsoleView.Draw
 			}
 			for (int i = 0; i < sessionStateDTOs.Length; i++)
 			{
+				if (_slotController.TryVacateSlot(sessionStateDTOs[i].SessionID))
+				{}
 				if (_slotController.TryOccupySlot(sessionStateDTOs[i].SessionID, out ESlotConfig occupySlot))
 				{
 					Panel panel = DrawTool.SetSessionPanel(sessionStateDTOs[i] );
 					_sessionPanels.TryUpdate(occupySlot, panel, _sessionPanels[occupySlot]);
 				}
-				else if (_slotController.TryVacateSlot(sessionStateDTOs[i].SessionID))
-				{
-
-				}
+				
 				//Panel panel = DrawTool.SetSessionPanel(sessionStateDTOs[i]);
 				//_sessionPanels.TryUpdate(occupySlot, panel, _sessionPanels[occupySlot]);
 

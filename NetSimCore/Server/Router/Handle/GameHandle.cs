@@ -50,10 +50,18 @@ namespace NETSIM.Server.Router.Handle
 					int issuanceID = _playerIssuance.IssuancePlayerID();
 					EPlayerColor issuanceColor = (EPlayerColor)(context.SessionID + 1);
 
+					_gamePacketPipe.OutBoundPipe.TryWrite(
+							new ResultPacketContext(
+								ESendType.UNICAST,
+								context.SessionID,
+								new S2C_LivePlayerRenewalPacket(_playerManager.LivePlayersCount , _playerManager.CaptureInfo(), _playerManager.CaptureSnapshot())
+								));
+
 					if (_playerManager.CreatePlayer(issuanceID, context.SessionID, issuanceColor))
 					{
 						SessionMeasure.Instance.OnPlayerID(context.SessionID, issuanceID);
 						SessionMeasure.Instance.OnPlayerColor(context.SessionID, issuanceColor);
+
 						_gamePacketPipe.OutBoundPipe.TryWrite(
 							new ResultPacketContext(
 								ESendType.UNICAST,
@@ -64,7 +72,7 @@ namespace NETSIM.Server.Router.Handle
 							new ResultPacketContext(
 								ESendType.BROADCASTEXCEPT,
 								context.SessionID,
-								new S2C_NonPlayableObjectSpawnResponse(context.SessionID , issuanceID , (int)issuanceColor)
+								new S2C_NonPlayableObjectSpawnResponse(context.SessionID, issuanceID, (int)issuanceColor)
 								));
 
 					}

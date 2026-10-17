@@ -2,6 +2,7 @@
 using NETSIM.GameRoom.Function;
 using NETSIM.MetaData.Enum;
 using NETSIM.Packet.Packets.ForIngame;
+using NETSIM.Packet.Packets.WrapperForPacket;
 using Spectre.Console;
 using System;
 using System.Collections.Generic;
@@ -92,9 +93,11 @@ namespace NETSIM.Object
 				this.LocationData.Direction.Y,
 				this.LocationData.Direction.Z
 			);
-
 		}
-
+		internal PlayerInfoWrapper OutputInfo()
+		{
+			return new PlayerInfoWrapper((int)this.PlayerColor);
+		}
 
 
 

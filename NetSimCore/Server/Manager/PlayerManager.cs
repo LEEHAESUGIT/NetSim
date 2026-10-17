@@ -3,6 +3,7 @@ using NETSIM.Measure;
 using NETSIM.MetaData.Enum;
 using NETSIM.Object;
 using NETSIM.Packet.Packets.ForIngame;
+using NETSIM.Packet.Packets.WrapperForPacket;
 using NETSIM.Sockets;
 using System;
 using System.Collections.Concurrent;
@@ -117,16 +118,24 @@ namespace NETSIM.Server.Manager
 		}
 
 
-		internal List<PlayersPositionSnapshot> ToInterpolation()
+		internal List<PlayersPositionSnapshot> CaptureSnapshot()
 		{
-			List<PlayersPositionSnapshot> _snapshots = new(_players.Count);
+			List<PlayersPositionSnapshot> _snapshots = new(LivePlayersCount);
 			foreach(var player in _players.Values)
 			{
 				_snapshots.Add(player.Snapshot());
 			}
 			return _snapshots;
 		}
-
+		internal List<PlayerInfoWrapper> CaptureInfo()
+		{
+			List<PlayerInfoWrapper> _infos = new(LivePlayersCount);
+			foreach(var player in _players.Values)
+			{
+				_infos.Add(player.OutputInfo());	
+			}
+			return _infos;
+		}
 
 
 
