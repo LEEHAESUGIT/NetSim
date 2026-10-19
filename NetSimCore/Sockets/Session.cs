@@ -33,8 +33,9 @@ namespace NETSIM.Sockets
 
 		private int _disconnectedLock = 0; // 1 일때 lock
 		internal int SessionID { get; init; }
-		internal DateTime LastHeartBeatTime { get; set; }
+		
 		internal long LastHeartBeatTick { get; set; }
+		internal DateTime LastHeartBeatTime { get; set; }
 
 		// Token
 		private CancellationTokenSource _linkedCts;
@@ -68,7 +69,6 @@ namespace NETSIM.Sockets
 
 			this._disconnectedLock = 0;
 
-			LastHeartBeatTime = DateTime.UtcNow;
 			LastHeartBeatTick = Environment.TickCount64;
 			client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
@@ -109,7 +109,6 @@ namespace NETSIM.Sockets
 
 			ClearSendPipe();
 
-			LastHeartBeatTime = DateTime.MinValue;
 			SessionMeasure.Instance.Clear(SessionID);
 		}
 
@@ -200,7 +199,7 @@ namespace NETSIM.Sockets
 			while (true)
 			{
 				// 최소 헤더 크기
-				if (_packetBuffer.Recv.Datasize < 4) return;
+				if (_packetBuffer.Recv.Datasize < 6) return;
 
 				// 헤더 크기 파싱
 				ushort PacketSize = BinaryPrimitives.ReadUInt16LittleEndian(_packetBuffer.Recv.ReadSpace);

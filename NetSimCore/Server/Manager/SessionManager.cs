@@ -73,6 +73,11 @@ namespace NETSIM.Server.Manager
 
 		#endregion
 
+		internal void NowTimeLog()
+		{
+
+		}
+
 
 		internal void ActivationSession(TcpClient client, ModulePipe modulePipe, CancellationToken shutDownToken)
 		{

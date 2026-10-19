@@ -1,6 +1,7 @@
 ﻿using NETSIM.Context;
 using NETSIM.Measure;
 using NETSIM.MetaData.Enum;
+using NETSIM.Packet;
 using NETSIM.Packet.Packets.ForSystem;
 using NETSIM.Server.Manager;
 using NETSIM.Server.Router.Pipe;
@@ -34,6 +35,23 @@ namespace NETSIM.Server.Router.Handle
 			this._systemPacketPipe = systemPacketPipe;
 		}
 
+		//internal void HeartBeatHeandle(ReceivePacketContext context)
+		//{
+
+		//	if (context.Packet is C2S_HeartBeat Packet)
+		//	{
+		//		SessionMeasure.Instance.OnSystemCommand(context.SessionID, "HeartBeat");
+
+		//		long nowTick = Environment.TickCount64;
+		//		_sessionManager.TryExcute(context.SessionID, session =>
+		//		{
+		//			session.LastHeartBeatTick = nowTick;
+		//		});
+
+		//		SystemPacketOperator.Instance.GenerateHeartbeatPacket(context.SessionID);
+		//	}
+		//}
+
 		internal void HeartBeatHeandle(ReceivePacketContext context)
 		{
 
@@ -60,18 +78,19 @@ namespace NETSIM.Server.Router.Handle
 				}
 
 				//LogView.Instance.WriteLogFile(ELogType.INFO , $"HeartBeatPacket");
-				_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
-					new S2C_HeartBeat(nowTimeTypeLong, nowTick, Packet.WasSendTime)));
+				SystemPacketOperator.Instance.GenerateHeartbeatPacket(context.SessionID , nowTimeTypeLong, nowTick , Packet.WasSendTime);
+				//_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
+				//	new S2C_HeartBeat(nowTimeTypeLong, nowTick, Packet.WasSendTime)));
 			}
 
 		}
+
 		internal void InitSessionHandle(ReceivePacketContext context)
 		{
 			if (context.Packet is C2S_InitRequest Packet)
 			{
-				//LogView.Instance.WriteLogFile(ELogType.INFO , $"InitSessionPacket");
-				_systemPacketPipe.OutBoundPipe.TryWrite(new ResultPacketContext(ESendType.UNICAST, context.SessionID,
-					new S2C_InitResponse(context.SessionID)));
+				SystemPacketOperator.Instance.GenerateInitSessionResponsePacket(context.SessionID);
+				LogView.Instance.WriteLogFile(ELogType.INFO , $"InitSessionHandle");
 
 			}
 

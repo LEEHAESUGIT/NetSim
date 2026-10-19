@@ -10,25 +10,19 @@ using System.Threading.Tasks;
 
 namespace NETSIM.Packet.Packets.ForIngame
 {
-
-	/// <summary>
-	/// playerId
-	/// playerColor
-	/// playerPosition
-	/// player Direction
-	/// </summary>
-
-
 	internal struct S2C_LivePlayerRenewalPacket : IPacket
 	{
 		// Info
 		public EPacketID packetID => EPacketID.S_LivePlayerRenewal;
-		public int LivePlayerCount;
-		public List<PlayerInfoWrapper> InfoWrapper;
-		public List<PlayersPositionSnapshot> Snapshots;
 
-		public S2C_LivePlayerRenewalPacket(int playerCount , List<PlayerInfoWrapper> infos, List<PlayersPositionSnapshot> snapshots)
+		public uint Tick { get; private set; }
+		public int LivePlayerCount { get; private set; }
+		public List<PlayerInfoWrapper> InfoWrapper { get; private set; }
+		public List<PlayersPositionSnapshot> Snapshots { get; private set; }
+
+		public S2C_LivePlayerRenewalPacket(uint tick, int playerCount, List<PlayerInfoWrapper> infos, List<PlayersPositionSnapshot> snapshots)
 		{
+			this.Tick = tick;
 			this.LivePlayerCount = playerCount;
 			this.InfoWrapper = infos;
 			this.Snapshots = snapshots;
@@ -36,6 +30,7 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 		public void Serialize(PacketWriter writer)
 		{
+			writer.Write(Tick);
 			writer.Write(LivePlayerCount);
 			writer.Write((ushort)InfoWrapper.Count);
 			writer.Write((ushort)Snapshots.Count);
@@ -57,6 +52,7 @@ namespace NETSIM.Packet.Packets.ForIngame
 		}
 		public static S2C_LivePlayerRenewalPacket Deserialize(PacketReader reader)
 		{
+			uint tick = reader.ReadUInt();
 			int playerCount = reader.ReadInt();
 			int infoWrapperCount = (int)reader.ReadUshort();
 			int snapshotCount = (int)reader.ReadUshort();
@@ -88,6 +84,7 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 			return new S2C_LivePlayerRenewalPacket
 			{
+				Tick = tick,
 				LivePlayerCount = playerCount,
 				InfoWrapper = deserializeInfos,
 				Snapshots = deserializeSnapshots

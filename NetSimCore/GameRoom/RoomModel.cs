@@ -2,8 +2,11 @@
 using NETSIM.MetaData.Enum;
 using NETSIM.MetaData.Interface;
 using NETSIM.Object;
+using NETSIM.Packet;
 using NETSIM.Packet.Packets.ForIngame;
+using NETSIM.Server.LiveData;
 using NETSIM.Server.Manager;
+using NETSIM.Server.Module;
 using NETSIM.Server.Router;
 using NETSIM.Server.Router.Pipe;
 using NETSIM_ConsoleView.LogMonitor;
@@ -30,21 +33,21 @@ namespace NETSIM.GameRoom
 		private readonly double _maxAllowedDebtMS = -100.0;
 
 
-		private GamePacketPipe _gamePacketPipe;
+		private ModulePipe _modulePipe;
 		private GamePacketRouter _gamePacketRouter;
 
 
 		// Interpolation
-		private int _tickCount = 0;
+		private uint _tickCount = 0;
 
 
-		internal RoomModel(int tickRate, GamePacketPipe gamePacketPipe, PlayerManager playerManager, GamePacketRouter gamePacketRouter)
+		internal RoomModel(int tickRate, ModulePipe modulePipe, PlayerManager playerManager, GamePacketRouter gamePacketRouter)
 		{
 			this._tickRate = tickRate;
 			this._deltaTime = 1f / tickRate;
 			this._targetTickMS = _oneSecMS / _tickRate;
 
-			this._gamePacketPipe = gamePacketPipe;
+			this._modulePipe = modulePipe;
 			this._playerManager = playerManager;
 			this._gamePacketRouter = gamePacketRouter;
 		}
@@ -71,14 +74,19 @@ namespace NETSIM.GameRoom
 			while (!shutDownToken.IsCancellationRequested)
 			{
 				sw.Restart();
+				// received packet process
 				PacketProcess();
+				// logic process
 				GameLogicUpdate();
+				// send Packet process
+				SystemPacketOperator.Instance.TakeOut(_modulePipe.SystemPacketPipe);
+				GamePacketOperator.Instance.TakeOut(_modulePipe.GamePacketPipe);
 				sw.Stop();
 
-				if(_tickCount == 10)
+				if (_tickCount % 10 == 0)
 				{
 					PlayerTransformInterPolation();
-					Interlocked.Exchange(ref _tickCount, 0);	
+					//Interlocked.Exchange(ref _tickCount, 0);
 				}
 
 				double workTimeMS = sw.Elapsed.TotalMilliseconds;
@@ -102,6 +110,9 @@ namespace NETSIM.GameRoom
 						_timeDebt = 0;
 					}
 				}
+
+				// IncreaseTick
+				LiveServerData.Instance.IncreamentServerTick(_tickCount);
 				Interlocked.Increment(ref _tickCount);
 			}
 		}
@@ -111,7 +122,7 @@ namespace NETSIM.GameRoom
 			int maxProcessCount = 500;
 			int currentCount = 0;
 
-			while (currentCount < maxProcessCount && _gamePacketPipe.InBoundPipe.TryRead(out ReceivePacketContext context))
+			while (currentCount < maxProcessCount && _modulePipe.GamePacketPipe.InBoundPipe.TryRead(out ReceivePacketContext context))
 			{
 				_gamePacketRouter.Apply(context);
 				currentCount++;
@@ -127,13 +138,19 @@ namespace NETSIM.GameRoom
 
 				if (player.NewMoveDirFlag != player.LastMoveDirFlag)
 				{
+					GamePacketOperator.Instance.GenerateMovePacket(
+						player.ControllHaveSessionID,
+						player.PlayerID,
+						player.NewMoveDirFlag
+						);
 
-					_gamePacketPipe.OutBoundPipe.TryWrite(
-						new ResultPacketContext(
-							ESendType.BROADCASTEXCEPT,
-							player.ControllHaveSessionID,
-							new S2C_MovePacket(player.PlayerID, player.NewMoveDirFlag)
-							));
+
+					//_gamePacketPipe.OutBoundPipe.TryWrite(
+					//	new ResultPacketContext(
+					//		ESendType.BROADCASTEXCEPT,
+					//		player.ControllHaveSessionID,
+					//		new S2C_MovePacket(player.PlayerID, player.NewMoveDirFlag)
+					//		));
 
 					player.SyncLastMoveFlag();
 				}
@@ -145,13 +162,19 @@ namespace NETSIM.GameRoom
 			if (_playerManager.LivePlayersCount == 0)
 				return;
 
-			_gamePacketPipe.OutBoundPipe.TryWrite(
-				new ResultPacketContext(
-					ESendType.BROADCAST,
-					-1,
-					new S2C_TransformInterpolationPacket(
-						_playerManager.CaptureSnapshot()
-						)));
+
+			GamePacketOperator.Instance.GenerateTransformInterpolationPacket(
+				-1,
+				_playerManager.CaptureSnapshot()
+				);
+
+			//_gamePacketPipe.OutBoundPipe.TryWrite(
+			//	new ResultPacketContext(
+			//		ESendType.BROADCAST,
+			//		-1,
+			//		new S2C_TransformInterpolationPacket(
+			//			_playerManager.CaptureSnapshot()
+			//			)));
 		}
 
 	}

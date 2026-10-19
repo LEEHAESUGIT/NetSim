@@ -30,7 +30,7 @@ namespace NETSIM.Server
 
 		// Pipe
 		private ModulePipe _modulePipe;
-		
+
 		// Module
 		private NetworkModule _networkModule;
 		private GameModule _gameModule;
@@ -45,9 +45,9 @@ namespace NETSIM.Server
 			this._serverCTS = serverCTS;
 
 			this._modulePipe = new ModulePipe();
-			
+
 			this._networkModule = new NetworkModule(portNum, _modulePipe, _serverCTS);
-			this._gameModule = new GameModule(_modulePipe.GamePacketPipe, _serverCTS);
+			this._gameModule = new GameModule(_modulePipe, _serverCTS);
 			this._measureModule = new MeasureModule(_serverCTS);
 
 

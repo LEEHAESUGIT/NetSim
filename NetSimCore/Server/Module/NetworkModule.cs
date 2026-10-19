@@ -69,6 +69,7 @@ namespace NETSIM.Server.Module
 				try
 				{
 					TcpClient client = await _listner.AcceptTcpClientAsync(ct);
+					client.NoDelay = true;
 					_ = Task.Run(() =>
 					{
 						_sessionLifeCycleService.OnSessionConnected(client, _moudlePipe, _cts.Token);

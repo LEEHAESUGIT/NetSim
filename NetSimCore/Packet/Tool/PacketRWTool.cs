@@ -33,6 +33,13 @@ namespace NETSIM.Packet.Tool
 			BinaryPrimitives.WriteInt32LittleEndian(span, value);
 			_buffer.Advance(spanSize);
 		}
+		internal void Write(uint value)
+		{
+			int spanSize = sizeof(int);
+			Span<byte> span = _buffer.GetSpan(spanSize);
+			BinaryPrimitives.WriteUInt32LittleEndian(span, value);
+			_buffer.Advance(spanSize);
+		}
 		internal void Write(float value)
 		{
 			int spanSize = sizeof(float);
@@ -101,6 +108,12 @@ namespace NETSIM.Packet.Tool
 			int value = BinaryPrimitives.ReadInt32LittleEndian(_buffer.WrittenSpan.Slice(_offset));
 
 			_offset += sizeof(int);
+			return value;
+		}
+		internal uint ReadUInt()
+		{
+			uint value = BinaryPrimitives.ReadUInt32LittleEndian(_buffer.WrittenSpan.Slice(_offset));
+			_offset += sizeof(uint);
 			return value;
 		}
 		public float ReadFloat()

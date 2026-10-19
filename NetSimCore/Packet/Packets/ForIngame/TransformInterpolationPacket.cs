@@ -15,16 +15,20 @@ namespace NETSIM.Packet.Packets.ForIngame
 	internal struct S2C_TransformInterpolationPacket : IPacket
 	{
 		public EPacketID packetID => EPacketID.S_Transform;
-		public List<PlayersPositionSnapshot> Snapshots;
+
+		public uint Tick { get; private set; }
+		public List<PlayersPositionSnapshot> Snapshots { get; private set; }
 
 
-		public S2C_TransformInterpolationPacket(List<PlayersPositionSnapshot> snapshot)
+		public S2C_TransformInterpolationPacket(uint tick, List<PlayersPositionSnapshot> snapshots)
 		{
-			this.Snapshots = snapshot;
+			this.Tick = tick;
+			this.Snapshots = snapshots;
 		}
 
 		public void Serialize(PacketWriter writer)
 		{
+			writer.Write(Tick);
 			writer.Write((ushort)Snapshots.Count);
 			foreach (var snapshot in Snapshots)
 			{
@@ -41,26 +45,29 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 		public static S2C_TransformInterpolationPacket Deserialize(PacketReader reader)
 		{
+			uint tick = reader.ReadUInt();
 			int snapshotCount = (int)reader.ReadUshort();
-			List<PlayersPositionSnapshot> deserializeSnapshots = new(snapshotCount);
+			List<PlayersPositionSnapshot> temp = new(snapshotCount);
 
 			for (int i = 0; i < snapshotCount; i++)
 			{
-				deserializeSnapshots.Add(new PlayersPositionSnapshot
-				{
-					PlayerID = reader.ReadInt(),
-					PosX = reader.ReadFloat(),
-					PosY = reader.ReadFloat(),
-					PosZ = reader.ReadFloat(),
+				temp.Add(new PlayersPositionSnapshot
+				(
+					reader.ReadInt(),
+					reader.ReadFloat(),
+					reader.ReadFloat(),
+					reader.ReadFloat(),
 
-					DirX = reader.ReadFloat(),
-					DirY = reader.ReadFloat(),
-					DirZ = reader.ReadFloat()
-				});
+					reader.ReadFloat(),
+					reader.ReadFloat(),
+					reader.ReadFloat()
+				));
 			}
+
 			return new S2C_TransformInterpolationPacket
 			{
-				Snapshots = deserializeSnapshots
+				Tick = tick,
+				Snapshots = temp
 			};
 		}
 
