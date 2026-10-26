@@ -1,4 +1,4 @@
-﻿using NETSIM.MetaData.Enum;
+﻿using NETSIM.Types.Enum;
 using NETSIM.Packet.Tool;
 using System;
 using System.Collections.Generic;

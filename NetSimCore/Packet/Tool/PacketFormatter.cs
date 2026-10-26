@@ -1,5 +1,5 @@
-﻿using NETSIM.MetaData.Enum;
-using NETSIM.MetaData.Interface;
+﻿using NETSIM.Types.Enum;
+using NETSIM.Types.Interface;
 using NETSIM.Packet.Packets;
 using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Packet.Packets.ForSystem;

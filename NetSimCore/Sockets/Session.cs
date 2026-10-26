@@ -1,10 +1,10 @@
-using NETSIM.Context;
-using NETSIM.Measure;
-using NETSIM.MetaData.Interface;
+using NETSIM.MeasureCore.Measure;
+using NETSIM.Types.Interface;
 using NETSIM.Packet.Packets;
 using NETSIM.Packet.Tool;
-using NETSIM.Server.Router.Pipe;
-using NETSIM.System.Buffer;
+using NETSIM.Pipe;
+using NETSIM.Pipe.PipeDispatch;
+using NETSIM.Sockets.Buffer;
 using NETSIM_ConsoleView.LogMonitor;
 using Shared.Configration;
 using Shared.Enum;
@@ -28,7 +28,11 @@ namespace NETSIM.Sockets
 		// Local
 		private TcpClient _client;
 		private NetworkStream _stream;
-		private PacketBufferSystem _packetBuffer;
+		//private PacketBufferSystem _packetBuffer;
+
+		private ReceiveBuffer _receiveBuff;
+
+
 		private PacketFormatter _formatter;
 
 		private int _disconnectedLock = 0; // 1 일때 lock
@@ -52,7 +56,9 @@ namespace NETSIM.Sockets
 		internal Session(int sessionID)
 		{
 			this.SessionID = sessionID;
-			this._packetBuffer = new PacketBufferSystem(4096);
+			//this._packetBuffer = new PacketBufferSystem(4096);
+
+			this._receiveBuff = new ReceiveBuffer(4096);
 			this._formatter = new PacketFormatter();
 		}
 
@@ -105,7 +111,7 @@ namespace NETSIM.Sockets
 
 			this._modulePipe = null;
 
-			this._packetBuffer.Recv.Clear();
+			this._receiveBuff.Clear();
 
 			ClearSendPipe();
 
@@ -159,13 +165,13 @@ namespace NETSIM.Sockets
 				while (!_loopToken.IsCancellationRequested)
 				{
 
-					if (_packetBuffer.Recv.FreeSize == 0)
+					if (_receiveBuff.FreeSize == 0)
 					{
-						_packetBuffer.Recv.TryWritePrepare(1);
-						if (_packetBuffer.Recv.FreeSize == 0) break;
+						_receiveBuff.TryWritePrepare(1);
+						if (_receiveBuff.FreeSize == 0) break;
 					}
 
-					int received = await _stream.ReadAsync(_packetBuffer.Recv.WriteSpace, _loopToken);
+					int received = await _stream.ReadAsync(_receiveBuff.WriteSpace, _loopToken);
 					if (received <= 0 || _disconnectedLock == 1)
 					{
 						LogView.Instance.WriteLogFile(ELogType.WARN , $"received packet is small than zero. ID : {SessionID} , size : {received}");
@@ -173,7 +179,7 @@ namespace NETSIM.Sockets
 						break;
 					}
 
-					_packetBuffer.Recv.OnWrite(received);
+					_receiveBuff.OnWrite(received);
 
 					PacketProcess();
 				}
@@ -199,10 +205,10 @@ namespace NETSIM.Sockets
 			while (true)
 			{
 				// 최소 헤더 크기
-				if (_packetBuffer.Recv.Datasize < 6) return;
+				if (_receiveBuff.Datasize < 6) return;
 
 				// 헤더 크기 파싱
-				ushort PacketSize = BinaryPrimitives.ReadUInt16LittleEndian(_packetBuffer.Recv.ReadSpace);
+				ushort PacketSize = BinaryPrimitives.ReadUInt16LittleEndian(_receiveBuff.ReadSpace);
 
 				if (PacketSize >= ServerConfigurationData.MaxPacketSize)
 				{
@@ -211,13 +217,13 @@ namespace NETSIM.Sockets
 					return;
 				}
 
-				if (_packetBuffer.Recv.Datasize < PacketSize) return;
+				if (_receiveBuff.Datasize < PacketSize) return;
 
-				ReadOnlySpan<byte> packetSpan = _packetBuffer.Recv.ReadSpace.Slice(0, PacketSize);
+				ReadOnlySpan<byte> packetSpan = _receiveBuff.ReadSpace.Slice(0, PacketSize);
 
 				if (_formatter.TryParse(packetSpan, out IPacket? parsePacket))
 				{
-					BranchPacket(new ReceivePacketContext { SessionID = this.SessionID, Packet = parsePacket });
+					BranchPacket(new ReceivePacketDispatch { SessionID = this.SessionID, Packet = parsePacket });
 				}
 				else
 				{
@@ -225,11 +231,11 @@ namespace NETSIM.Sockets
 					Disconnect();
 					return;
 				}
-				_packetBuffer.Recv.OnRead(PacketSize);
+				_receiveBuff.OnRead(PacketSize);
 			}
 		}
 
-		private void BranchPacket(ReceivePacketContext packetContext)
+		private void BranchPacket(ReceivePacketDispatch packetContext)
 		{
 			int packetType = (int)packetContext.Packet.packetID;
 

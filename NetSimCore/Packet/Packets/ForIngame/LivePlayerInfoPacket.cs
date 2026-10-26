@@ -1,10 +1,11 @@
-﻿using NETSIM.MetaData.Enum;
-using NETSIM.MetaData.Interface;
-using NETSIM.Packet.Packets.WrapperForPacket;
+﻿using NETSIM.GameCore.GameRoom.GameEntity.Snapshots;
+using NETSIM.Types.Enum;
+using NETSIM.Types.Interface;
 using NETSIM.Packet.Tool;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,79 +17,79 @@ namespace NETSIM.Packet.Packets.ForIngame
 		public EPacketID packetID => EPacketID.S_LivePlayerRenewal;
 
 		public uint Tick { get; private set; }
-		public int LivePlayerCount { get; private set; }
-		public List<PlayerInfoWrapper> InfoWrapper { get; private set; }
-		public List<PlayersPositionSnapshot> Snapshots { get; private set; }
+		public int PlayerCount { get; private set; }
+		public List<PlayerInfoSnapshot> PlayerInfoSnapshots { get; private set; }
+		public List<PlayerMovementSnapshot> PlayerTransformSnapshots { get; private set; }
 
-		public S2C_LivePlayerRenewalPacket(uint tick, int playerCount, List<PlayerInfoWrapper> infos, List<PlayersPositionSnapshot> snapshots)
+		public S2C_LivePlayerRenewalPacket(uint tick, int playerCount, List<PlayerInfoSnapshot> playerInfoShapshots, List<PlayerMovementSnapshot> playerTransformSnapshots)
 		{
 			this.Tick = tick;
-			this.LivePlayerCount = playerCount;
-			this.InfoWrapper = infos;
-			this.Snapshots = snapshots;
+			this.PlayerCount = playerCount;
+			this.PlayerInfoSnapshots = playerInfoShapshots;
+			this.PlayerTransformSnapshots = playerTransformSnapshots;
 		}
 
 		public void Serialize(PacketWriter writer)
 		{
 			writer.Write(Tick);
-			writer.Write(LivePlayerCount);
-			writer.Write((ushort)InfoWrapper.Count);
-			writer.Write((ushort)Snapshots.Count);
-			foreach (var info in InfoWrapper)
+			writer.Write(PlayerCount);
+			foreach (PlayerInfoSnapshot playerInfoSnapshot in PlayerInfoSnapshots)
 			{
-				writer.Write(info.PlayerColor);
+				writer.Write(playerInfoSnapshot.PlayerID);
+				writer.Write((int)playerInfoSnapshot.PlayerColor);
 			}
-			foreach (var snapshot in Snapshots)
+			foreach (PlayerMovementSnapshot playerTransformSnapshot in PlayerTransformSnapshots)
 			{
-				writer.Write(snapshot.PlayerID);
-				writer.Write(snapshot.PosX);
-				writer.Write(snapshot.PosY);
-				writer.Write(snapshot.PosZ);
+				writer.Write(playerTransformSnapshot.Position.X);
+				writer.Write(playerTransformSnapshot.Position.Y);
+				writer.Write(playerTransformSnapshot.Position.Z);
 
-				writer.Write(snapshot.DirX);
-				writer.Write(snapshot.DirY);
-				writer.Write(snapshot.DirZ);
+				writer.Write(playerTransformSnapshot.Direction.X);
+				writer.Write(playerTransformSnapshot.Direction.Y);
+				writer.Write(playerTransformSnapshot.Direction.Z);
 			}
 		}
 		public static S2C_LivePlayerRenewalPacket Deserialize(PacketReader reader)
 		{
 			uint tick = reader.ReadUInt();
 			int playerCount = reader.ReadInt();
-			int infoWrapperCount = (int)reader.ReadUshort();
-			int snapshotCount = (int)reader.ReadUshort();
 
-			List<PlayerInfoWrapper> deserializeInfos = new List<PlayerInfoWrapper>(infoWrapperCount);
-			List<PlayersPositionSnapshot> deserializeSnapshots = new List<PlayersPositionSnapshot>(snapshotCount);
+			List<PlayerInfoSnapshot> PlayerInfoSnapshots = new(playerCount);
+			List<PlayerMovementSnapshot> PlayerTransformSnapshots = new(playerCount);
 
-			for (int infoIndex = 0; infoIndex < infoWrapperCount; infoIndex++)
+			for (int i = 0; i < playerCount; i++)
 			{
-				deserializeInfos.Add(new PlayerInfoWrapper
-				{
-					PlayerColor = reader.ReadInt()
-				});
+				PlayerInfoSnapshots.Add(
+					new PlayerInfoSnapshot
+					(
+						reader.ReadInt(),
+						(EPlayerColor)reader.ReadInt()
+					));
 			}
-			for (int snapshotIndex = 0; snapshotIndex < snapshotCount; snapshotIndex++)
-			{
-				deserializeSnapshots.Add(new PlayersPositionSnapshot
-				{
-					PlayerID = reader.ReadInt(),
-					PosX = reader.ReadFloat(),
-					PosY = reader.ReadFloat(),
-					PosZ = reader.ReadFloat(),
 
-					DirX = reader.ReadFloat(),
-					DirY = reader.ReadFloat(),
-					DirZ = reader.ReadFloat()
-				});
+			for (int i = 0; i < playerCount; i++)
+			{
+				PlayerTransformSnapshots.Add(new PlayerMovementSnapshot
+				(
+					new Vector3(
+					reader.ReadFloat(),
+					reader.ReadFloat(),
+					reader.ReadFloat()
+					),
+				new Vector3(
+					reader.ReadFloat(),
+					reader.ReadFloat(),
+					reader.ReadFloat()
+					)
+				));
 			}
 
 			return new S2C_LivePlayerRenewalPacket
 			{
 				Tick = tick,
-				LivePlayerCount = playerCount,
-				InfoWrapper = deserializeInfos,
-				Snapshots = deserializeSnapshots
-
+				PlayerCount = playerCount,
+				PlayerInfoSnapshots = PlayerInfoSnapshots,
+				PlayerTransformSnapshots = PlayerTransformSnapshots
 			};
 		}
 	}

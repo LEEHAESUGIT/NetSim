@@ -31,7 +31,6 @@ namespace NETSIM_ConsoleView
 				try
 				{
 					_drawManager.Live();
-
 				}
 				catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
 			});

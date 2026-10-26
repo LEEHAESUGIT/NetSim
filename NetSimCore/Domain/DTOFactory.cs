@@ -1,5 +1,5 @@
 ﻿using NETSIM.Domain.State;
-using NETSIM.Measure;
+using NETSIM.MeasureCore.Measure;
 using Shared.DTO;
 using System;
 using System.Collections.Generic;

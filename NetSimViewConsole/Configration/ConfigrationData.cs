@@ -15,13 +15,6 @@ namespace NETSIM_ConsoleView.Configration
 		internal static readonly string SessionLayoutText = "SessionLayout";
 	}
 
-
-
-
-
-
-
-
 	internal class Slot
 	{
 		internal int ID { get;  private set; }

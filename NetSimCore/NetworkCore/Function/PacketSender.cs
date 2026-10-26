@@ -1,0 +1,137 @@
+﻿using NETSIM.Pipe.PipeDispatch;
+using NETSIM.Mapper;
+using NETSIM.Types.Enum;
+using NETSIM.Types.Interface;
+using NETSIM.NetworkCore.Manager;
+using NETSIM.Packet;
+using NETSIM.Packet.Tool;
+using NETSIM.Pipe;
+using NETSIM.Sockets;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+
+namespace NETSIM.NetworkCore.Function
+{
+	internal class PacketSender
+	{
+		// Local
+		private PacketFormatter _formatter;
+
+		// Manager
+		private SessionManager _sessionManager;
+
+		// Pipe
+		private ModulePipe _modulePipe;
+
+		internal PacketSender(SessionManager sessionManager, ModulePipe modulePipe)
+		{
+			// Local
+			_formatter = new PacketFormatter();
+
+			// Manager
+			_sessionManager = sessionManager;
+
+			// Pipe
+			_modulePipe = modulePipe;
+
+
+		}
+
+		internal void Start(CancellationToken shutDownToken)
+		{
+			_ = SystemSendLoopAsync(shutDownToken);
+			_ = GameSendLoopAsync(shutDownToken);
+		}
+
+		private async Task SystemSendLoopAsync(CancellationToken shutDownToken)
+		{
+			while (!shutDownToken.IsCancellationRequested)
+			{
+				if (await _modulePipe.SystemPacketPipe.OutBoundPipe.WaitForPipe(shutDownToken))
+				{
+					while (_modulePipe.SystemPacketPipe.OutBoundPipe.TryRead(out SendPacketDispatch context))
+					{
+						SendBranch(context);
+					}
+				}
+			}
+		}
+
+		private async Task GameSendLoopAsync(CancellationToken shutDownToken)
+		{
+			while (!shutDownToken.IsCancellationRequested)
+			{
+				if (await _modulePipe.GamePacketPipe.OutBoundPipe.WaitForPipe(shutDownToken))
+				{
+					while (_modulePipe.GamePacketPipe.OutBoundPipe.TryRead(out SendPacketDispatch context))
+					{
+						SendBranch(context);
+					}
+				}
+			}
+		}
+
+		private void SendBranch(SendPacketDispatch resultContext)
+		{
+			if (resultContext.SendType == ESendType.UNICAST)
+				UniCast(resultContext.SessionID, resultContext.Packet);
+			if (resultContext.SendType == ESendType.BROADCAST)
+				Broadcast(resultContext.Packet);
+			if (resultContext.SendType == ESendType.BROADCASTEXCEPT)
+				BroadcastExcept(resultContext.SessionID, resultContext.Packet);
+
+		}
+
+		private void UniCast(int sessionID, IPacket packet)
+		{
+			try
+			{
+				ReadOnlyMemory<byte> packetData = _formatter.Format(packet);
+
+				_sessionManager.TryExcute(sessionID, session =>
+				{
+					session.InputPacketData(packetData);
+				});
+
+			}
+			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
+
+		}
+
+		private void Broadcast(IPacket packet)
+		{
+			try
+			{
+				ReadOnlyMemory<byte> packetData = _formatter.Format(packet);
+
+				_sessionManager.ForEachActionSession(session =>
+				{
+					session.InputPacketData(packetData);
+				});
+			}
+			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
+		}
+
+		private void BroadcastExcept(int exceptSessionID, IPacket packet)
+		{
+			try
+			{
+				ReadOnlyMemory<byte> packetData = _formatter.Format(packet);
+				_sessionManager.ExceptForAllOtherSessionAction(exceptSessionID, session =>
+				{
+					session.InputPacketData(packetData);
+				});
+
+			}
+			catch (Exception ex)
+			{ Console.WriteLine($"[Error] : {ex}"); }
+		}
+
+
+	}
+}

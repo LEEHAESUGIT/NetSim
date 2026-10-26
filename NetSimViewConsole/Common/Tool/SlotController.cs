@@ -101,9 +101,6 @@ namespace NETSIM_ConsoleView.Common.Tool
 				return false;
 			}
 		}
-
-
-
 		// 중복 확인
 		// 이미 존재하다면 key 반환,
 		// 존재 하지 않다면 진행.
@@ -163,12 +160,6 @@ namespace NETSIM_ConsoleView.Common.Tool
 		}
 		// 특정 슬롯 비우기
 		private void ClearSlot(ESlotConfig slotKey) => Slots[slotKey] = Slot.CreateEmpty();
-
-
-
-
-
-
 
 	}
 }

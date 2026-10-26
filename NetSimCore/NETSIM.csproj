@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Pipe\PipeDispatch\SendPacketDispatch.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Spectre.Console" Version="0.57.2" />
     <PackageReference Include="System.IO.Pipelines" Version="10.0.11" />
   </ItemGroup>
