@@ -1,28 +1,29 @@
 ﻿using NETSIM_ConsoleView.Configration;
 using Shared.Enum;
-using Spectre.Console;
-using Spectre.Console.Rendering;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM_ConsoleView.Common.Tool
 {
+	/// <summary> 
+	/// SlotController 기능 :  <br/>
+	/// 중복검사 <br/> 
+	/// 슬롯할당 <br/> 
+	/// 슬롯비우기 <br/> 
+	/// 슬롯찾기 <br/> 
+	/// </summary>
 	internal class SlotController
 	{
-		internal Dictionary<ESlotConfig, Slot> Slots = new Dictionary<ESlotConfig, Slot>();
+		private const int MAXSLOTCOUNT = 8;
+		internal Dictionary<ESlotConfig, Slot> Slots = new Dictionary<ESlotConfig, Slot>(MAXSLOTCOUNT);
 
 		internal SlotController()
 		{
-			for (int i = 0; i < 8; i++)
+			for (int i = 0; i < MAXSLOTCOUNT; i++)
 			{
 				Slots.Add((ESlotConfig)i, Slot.CreateEmpty());
 			}
 		}
-
-		internal bool TryOccupySlot(int sessionID, out ESlotConfig slot)
+		#region
+		internal bool TryAllocateSlot(int sessionID, out ESlotConfig slot)
 		{
 			if (sessionID == -1)
 			{
@@ -33,13 +34,13 @@ namespace NETSIM_ConsoleView.Common.Tool
 			{
 				if (!IsExist(sessionID))
 				{
-					ESlotConfig targetSlotKey = SearchEmptySlotKey();
+					ESlotConfig targetSlotKey = FindEmptySlotSequentiallyASC();
 					if (targetSlotKey == ESlotConfig.NONE)
 					{
 						slot = ESlotConfig.NONE;
 						return false;
 					}
-					if (FillSlot(targetSlotKey, Slot.Assign(sessionID)))
+					if (AllocateSlot(targetSlotKey, Slot.Assign(sessionID)))
 					{
 						slot = targetSlotKey;
 						return true;
@@ -47,7 +48,7 @@ namespace NETSIM_ConsoleView.Common.Tool
 					slot = ESlotConfig.NONE;
 					return false;
 				}
-				slot = SearchOccupySlotKey(sessionID);
+				slot = FindAllocatedSlotOf(sessionID);
 				return true;
 			}
 			catch (Exception ex)
@@ -57,24 +58,18 @@ namespace NETSIM_ConsoleView.Common.Tool
 				return false;
 			}
 		}
-		internal bool TryVacateSlot(int sessionID)
+		internal bool TryDeallocateSlot(int sessionID)
 		{
 			try
 			{
-				ESlotConfig occupySlotKey = SearchOccupySlotKey(sessionID);
+				ESlotConfig occupySlotKey = FindAllocatedSlotOf(sessionID);
 
 				if (occupySlotKey == ESlotConfig.NONE)
 				{
 					return false;
 				}
 
-				//if (IsEmptySlot(occupySlotKey))
-				//{
-				//	ClearSlot(occupySlotKey);
-				//	return false;
-				//}
-
-				ClearSlot(occupySlotKey);
+				DeallocateSlot(occupySlotKey);
 				return true;
 			}
 			catch (Exception ex)
@@ -89,7 +84,7 @@ namespace NETSIM_ConsoleView.Common.Tool
 			try
 			{
 				Slots.Clear();
-				for (int i = 0; i < 8; i++)
+				for (int i = 0; i < MAXSLOTCOUNT; i++)
 				{
 					Slots.Add((ESlotConfig)i, Slot.CreateEmpty());
 				}
@@ -101,6 +96,8 @@ namespace NETSIM_ConsoleView.Common.Tool
 				return false;
 			}
 		}
+		#endregion
+		#region
 		// 중복 확인
 		// 이미 존재하다면 key 반환,
 		// 존재 하지 않다면 진행.
@@ -114,9 +111,9 @@ namespace NETSIM_ConsoleView.Common.Tool
 			return false;
 		}
 		// 슬롯의 낮은 키 부터 순차적으로 확인해 빈 슬롯 찾기
-		private ESlotConfig SearchEmptySlotKey()
+		private ESlotConfig FindEmptySlotSequentiallyASC()
 		{
-			for (int i = 0; i < Slots.Count; i++)
+			for (int i = 0; i < MAXSLOTCOUNT; i++)
 			{
 				if (Slots[(ESlotConfig)i].IsEmpty)
 					return (ESlotConfig)i;
@@ -125,9 +122,9 @@ namespace NETSIM_ConsoleView.Common.Tool
 		}
 
 		// ID를 가지고 현재 점유하고 있는 슬롯 찾기
-		private ESlotConfig SearchOccupySlotKey(int sessionID)
+		private ESlotConfig FindAllocatedSlotOf(int sessionID)
 		{
-			for (int i = 0; i < Slots.Count; i++)
+			for (int i = 0; i < MAXSLOTCOUNT; i++)
 			{
 				if (Slots[(ESlotConfig)i].ID == sessionID)
 					return (ESlotConfig)i;
@@ -135,31 +132,22 @@ namespace NETSIM_ConsoleView.Common.Tool
 			return ESlotConfig.NONE;
 		}
 
-		// 슬롯 채우기
-		private bool FillSlot(ESlotConfig slotKey, Slot fillEntity)
-		{
-
-			Slots[slotKey] = fillEntity;
-			return true;
-
-			//if (Slots.TryGetValue(slotKey, out Slot? slot))
-			//{
-			//	slot = fillEntity;
-			//	return true;
-			//}
-			//throw new ArgumentOutOfRangeException(nameof(slotKey), $"Invalid slot key requested: {slotKey}");
-
-		}
 		// 특정 슬롯이 비었는지 확인
-		internal bool IsEmptySlot(ESlotConfig slotKey)
+		internal bool IsEmpty(ESlotConfig slotKey)
 		{
 			if (Slots.TryGetValue(slotKey, out Slot? slot))
 				return slot.IsEmpty;
 
 			throw new ArgumentOutOfRangeException(nameof(slotKey), $"Invalid slot key requested: {slotKey}");
 		}
+		// 슬롯 채우기
+		private bool AllocateSlot(ESlotConfig slotKey, Slot fillEntity)
+		{
+			Slots[slotKey] = fillEntity;
+			return true;
+		}
 		// 특정 슬롯 비우기
-		private void ClearSlot(ESlotConfig slotKey) => Slots[slotKey] = Slot.CreateEmpty();
-
+		private void DeallocateSlot(ESlotConfig slotKey) => Slots[slotKey] = Slot.CreateEmpty();
+		#endregion
 	}
 }

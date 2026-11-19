@@ -1,19 +1,10 @@
-﻿using NETSIM.Pipe.PipeDispatch;
-using NETSIM.Mapper;
+﻿using NETSIM.NetworkCore.Manager;
+using NETSIM.Packet.Tool;
+using NETSIM.Pipe.PacketDispatch;
+using NETSIM.Pipe.PacketPipe;
+using NETSIM.Sockets;
 using NETSIM.Types.Enum;
 using NETSIM.Types.Interface;
-using NETSIM.NetworkCore.Manager;
-using NETSIM.Packet;
-using NETSIM.Packet.Tool;
-using NETSIM.Pipe;
-using NETSIM.Sockets;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace NETSIM.NetworkCore.Function
 {
@@ -28,6 +19,11 @@ namespace NETSIM.NetworkCore.Function
 		// Pipe
 		private ModulePipe _modulePipe;
 
+		internal Task SystemSendLoopAsyncTask(CancellationToken token) => SystemSendLoopAsync(token);
+		internal Task GameSendLoopAsyncTask(CancellationToken token) => GameSendLoopAsync(token);
+
+
+
 		internal PacketSender(SessionManager sessionManager, ModulePipe modulePipe)
 		{
 			// Local
@@ -38,15 +34,8 @@ namespace NETSIM.NetworkCore.Function
 
 			// Pipe
 			_modulePipe = modulePipe;
-
-
 		}
 
-		internal void Start(CancellationToken shutDownToken)
-		{
-			_ = SystemSendLoopAsync(shutDownToken);
-			_ = GameSendLoopAsync(shutDownToken);
-		}
 
 		private async Task SystemSendLoopAsync(CancellationToken shutDownToken)
 		{
@@ -78,8 +67,15 @@ namespace NETSIM.NetworkCore.Function
 
 		private void SendBranch(SendPacketDispatch resultContext)
 		{
+
 			if (resultContext.SendType == ESendType.UNICAST)
+			{
+				if (!_sessionManager.LiveSessions.TryGetValue(resultContext.SessionID, out Session session))
+					return;
+				if (session.Generation != resultContext.Generation)
+					return;
 				UniCast(resultContext.SessionID, resultContext.Packet);
+			}
 			if (resultContext.SendType == ESendType.BROADCAST)
 				Broadcast(resultContext.Packet);
 			if (resultContext.SendType == ESendType.BROADCASTEXCEPT)
@@ -89,6 +85,7 @@ namespace NETSIM.NetworkCore.Function
 
 		private void UniCast(int sessionID, IPacket packet)
 		{
+
 			try
 			{
 				ReadOnlyMemory<byte> packetData = _formatter.Format(packet);

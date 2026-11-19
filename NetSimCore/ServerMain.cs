@@ -1,26 +1,11 @@
-﻿using NETSIM.Types.Enum;
-using NETSIM.Types.Interface;
-using NETSIM.Router;
-using NETSIM.Router.Handle;
-using NETSIM.Sockets;
-using Shared.Enum;
-using System;
-using System.Collections.Frozen;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
-using NETSIM.Pipe.PipeDispatch;
-using NETSIM.Router.Init;
-using NETSIM_ConsoleView.LogMonitor;
-using NETSIM.Mapper;
-using NETSIM.Pipe;
+﻿using NETSIM.GameCore;
+using NETSIM.MeasureCore;
 using NETSIM.MeasureCore.Measure;
 using NETSIM.NetworkCore;
-using NETSIM.GameCore;
-using NETSIM.MeasureCore;
+using NETSIM.Pipe.EventPipe;
+using NETSIM.Pipe.PacketPipe;
+using NETSIM_ConsoleView.LogMonitor;
+using Shared.Enum;
 
 
 namespace NETSIM
@@ -31,27 +16,32 @@ namespace NETSIM
 
 		// Pipe
 		private ModulePipe _modulePipe;
+		private EventDispatchPipe _eventPipe;
 
 		// Module
 		private NetworkModule _networkModule;
 		private GameModule _gameModule;
 		private MeasureModule _measureModule;
 
-		// Local
-		private bool _isRunning = false;
+		// Task
+		private Task? _AcceptAsyncTask;
+		private Task? _measureAsyncTask;
 
+
+		// Local
+		private const int _serverID = 1;
 
 		internal ServerMain(int portNum, CancellationTokenSource serverCTS)
 		{
 			_serverCTS = serverCTS;
 
 			_modulePipe = new ModulePipe();
-
-			_networkModule = new NetworkModule(portNum, _modulePipe, _serverCTS);
-			_gameModule = new GameModule(_modulePipe, _serverCTS);
-			_measureModule = new MeasureModule(_serverCTS);
+			_eventPipe = new EventDispatchPipe();
 
 
+			_networkModule = new NetworkModule(portNum, _modulePipe, _eventPipe, _serverCTS.Token);
+			_gameModule = new GameModule(_modulePipe, _eventPipe, _serverCTS.Token);
+			_measureModule = new MeasureModule(_serverID);
 		}
 		internal bool Start()
 		{
@@ -59,44 +49,94 @@ namespace NETSIM
 			{
 				_networkModule.Start();
 				_gameModule.Start();
-				_measureModule.Start();
-				_isRunning = true;
+
+				// RunAsync
+				_AcceptAsyncTask = _networkModule.RunAcceptAsync(_serverCTS.Token);
+				_measureAsyncTask = _measureModule.RunMeasureAsync(_serverCTS.Token);
 
 				ServerMeasure.Instance.OnTimer();
 				ServerMeasure.Instance.OnStateLight(EStateLight.GREEN);
-				ServerMeasure.Instance.OnServerIsRunning(_isRunning);
+				ServerMeasure.Instance.OnServerIsRunning(true);
 
 				LogView.Instance.WriteLogFile(ELogType.INFO, $"---------------------SERVER START---------------------");
-
 				return true;
+
 			}
 			catch (Exception ex)
 			{
-				LogView.Instance.WriteLogFile(ELogType.FATAL, $" FailServerStart , error : {ex}");
+				LogView.Instance.WriteLogFile(ELogType.FATAL, $" FailModuleStart , error : {ex}");
 				return false;
 			}
+
 		}
-		internal bool Stop()
+		internal async Task Stop()
 		{
+			var erros = new List<Exception>();
+
 			try
 			{
 				_serverCTS.Cancel();
-				_serverCTS.Dispose();
-				//_listner?.Stop();
-				_isRunning = false;
+			}
+			catch (Exception ex)
+			{
+				erros.Add(ex);
+				LogView.Instance.WriteLogFile(ELogType.FATAL, $" error : {ex}");
+			}
 
-				ServerMeasure.Instance.OnServerIsRunning(_isRunning);
+			var pending = new List<Task>();
+			if (_AcceptAsyncTask is not null)
+				pending.Add(_AcceptAsyncTask);
+			if (_measureAsyncTask is not null)
+				pending.Add(_measureAsyncTask);
+
+			try
+			{
+				await Task.WhenAll(pending);
+			}
+			catch (OperationCanceledException) when (_serverCTS.IsCancellationRequested)
+			{
+				// 이 세션에 요청된 취소로 루프가 종료됨
+			}
+			catch (Exception ex)
+			{
+				erros.Add(ex);
+				LogView.Instance.WriteLogFile(ELogType.FATAL, $"Background task failed: {ex}");
+			}
+
+			try
+			{
+				await _networkModule.Stop();
+			}
+			catch (Exception ex)
+			{
+				erros.Add(ex);
+				LogView.Instance.WriteLogFile(ELogType.FATAL, $"NetworkModule  error : {ex}");
+			}
+
+			try
+			{
+				await _gameModule.Stop();
+			}
+			catch (Exception ex)
+			{
+				erros.Add(ex);
+				LogView.Instance.WriteLogFile(ELogType.FATAL, $"GameModule error : {ex}");
+			}
+
+			try
+			{
+				ServerMeasure.Instance.OnServerIsRunning(false);
 				ServerMeasure.Instance.OnStateLight(EStateLight.RED);
 				ServerMeasure.Instance.OffTimer();
 
 				LogView.Instance.WriteLogFile(ELogType.INFO, $"---------------------SERVER STOP---------------------");
-				return true;
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[Error] : {ex}");
-				return false;
+				erros.Add(ex);
+				LogView.Instance.WriteLogFile(ELogType.FATAL, $" error : {ex}");
 			}
+
 		}
 	}
 }

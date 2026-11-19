@@ -1,13 +1,8 @@
 ﻿using NETSIM.GameCore.GameRoom.GameEntity.Snapshots;
+using NETSIM.Packet.Tool;
 using NETSIM.Types.Enum;
 using NETSIM.Types.Interface;
-using NETSIM.Packet.Tool;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.Packet.Packets.ForIngame
 {
@@ -17,16 +12,17 @@ namespace NETSIM.Packet.Packets.ForIngame
 		public EPacketID packetID => EPacketID.S_LivePlayerRenewal;
 
 		public uint Tick { get; private set; }
+
 		public int PlayerCount { get; private set; }
 		public List<PlayerInfoSnapshot> PlayerInfoSnapshots { get; private set; }
 		public List<PlayerMovementSnapshot> PlayerTransformSnapshots { get; private set; }
 
 		public S2C_LivePlayerRenewalPacket(uint tick, int playerCount, List<PlayerInfoSnapshot> playerInfoShapshots, List<PlayerMovementSnapshot> playerTransformSnapshots)
 		{
-			this.Tick = tick;
-			this.PlayerCount = playerCount;
-			this.PlayerInfoSnapshots = playerInfoShapshots;
-			this.PlayerTransformSnapshots = playerTransformSnapshots;
+			Tick = tick;
+			PlayerCount = playerCount;
+			PlayerInfoSnapshots = playerInfoShapshots;
+			PlayerTransformSnapshots = playerTransformSnapshots;
 		}
 
 		public void Serialize(PacketWriter writer)

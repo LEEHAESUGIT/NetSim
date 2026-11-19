@@ -1,80 +1,56 @@
-﻿using NETSIM_ConsoleView;
+﻿using NETSIM.Common;
 using NETSIM.Domain;
-using NETSIM.Types.Interface;
-using Shared.Configration;
+using NETSIM.MeasureCore.Measure;
+using NETSIM_ConsoleView;
 using Shared.DTO;
 using Shared.DTO.Function;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using NETSIM.MeasureCore.Measure;
+using System.Diagnostics;
 
 namespace NETSIM.MeasureCore
 {
-	internal class MeasureModule : IModule
+	internal class MeasureModule
 	{
-		private CancellationTokenSource _cts;
+		private int _severID;
 
+		internal Task RunMeasureAsync(CancellationToken token) => MeasureLoopAsync(token);
 
-		internal MeasureModule(CancellationTokenSource serverCTS)
+		internal MeasureModule(int serverID)
 		{
-			_cts = serverCTS;
+			_severID = serverID;
 		}
 
-		public void Start()
-		{
-			_ = MeasureLoopAsync(_cts.Token);
-		}
-		public void Stop()
-		{
-
-		}
-		public void WireEvents()
-		{
-
-		}
-		public void PipeWire()
-		{
-
-		}
-
-
-
-
-
-
-
-
-		public async Task MeasureLoopAsync(CancellationToken shutDownToken)
+		private async Task MeasureLoopAsync(CancellationToken shutDownToken)
 		{
 			// 델리게이트로 NetworkLayer를 호출 1초 당 1번 호출하게됨 
 			var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+			Stopwatch sw = Stopwatch.StartNew();
 
 			ServerMeasure.Instance.OnServerName("NETSIM");
 			while (await timer.WaitForNextTickAsync(shutDownToken))
 			{
-				ConsoleView.PutServerStatus(DTOFunction.Serializer(
-					DTOFactory.Of(ServerMeasure.Instance.State)
-					));
 
+				double elapsedSec = sw.Elapsed.TotalSeconds;
+				sw.Restart();
+
+				ServerMeasure.Instance.OnUpdateRecv(elapsedSec);
+				ServerMeasure.Instance.OnUpdateSend(elapsedSec);
+				ServerMeasure.Instance.OnUpdateTPS(elapsedSec);
+
+				ConsoleView.PutServerStatus(DTOFunction.Serializer(
+					DTOFactory.Of(ServerMeasure.Instance.State)));
 
 				ConsoleView.PutSessionsStatus(new DTOWrappers<SessionStateDTO>(
-					1,
-					1,
+					_severID,
 					SessionDTOSpanof()
 					));
-
 			}
 		}
 
 		private ReadOnlySpan<SessionStateDTO> SessionDTOSpanof()
 		{
-
 			SessionStateDTO[] sessionStateDTOs = new SessionStateDTO[8];
 
-			for (int i = ServerConfigurationData.SessionMin; i < ServerConfigurationData.SessionMax; i++)
+			for (int i = ServerDataConfigration.MinSessionCount; i < ServerDataConfigration.MaxSessionCount; i++)
 				sessionStateDTOs[i] = DTOFactory.Of(SessionMeasure.Instance.States[i]);
 
 

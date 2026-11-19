@@ -1,10 +1,5 @@
 ﻿using NETSIM.Types.Enum;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+using System.Numerics;
 
 namespace NETSIM.GameCore.GameRoom.GameEntity
 {
@@ -12,6 +7,10 @@ namespace NETSIM.GameCore.GameRoom.GameEntity
 	{
 		internal readonly float MoveSpeed { get; } = 5f;
 		internal readonly EPlayerColor PlayerColor { get; } = EPlayerColor.NONE;
+
+		internal readonly Vector3 Position { get; } = Vector3.Zero;
+		internal readonly Vector3 Direction { get; } = Vector3.Zero;
+
 
 		public DefaultPlayer() { }
 	}

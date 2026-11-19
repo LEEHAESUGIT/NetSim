@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection.Emit;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace NETSIM_ConsoleView.LogMonitor
 {
@@ -17,7 +12,11 @@ namespace NETSIM_ConsoleView.LogMonitor
 		ERROR,
 		FATAL
 	}
-
+	/// <summary>
+	/// LogView 기능 : <br/>
+	/// 프로그램에서의 기록을 파일로 저장 <br/>
+	/// 비동기 Task와 Log Channel 를 통해 로그의 순서 보장<br/>
+	/// </summary>
 	public class LogView
 	{
 		private Channel<string> _logChannel = Channel.CreateUnbounded<string>();
@@ -25,18 +24,18 @@ namespace NETSIM_ConsoleView.LogMonitor
 		private readonly string _logDirectory;
 
 		#region Singletone
+		private static readonly Lazy<LogView> _instance = new Lazy<LogView>(() => new LogView());
 		/// <summary>
 		/// 기존 알고있던 static형식의 싱글톤과 차이점
 		/// 1. Lazy<>를 사용해 C#내부의 스레드 안전성 보장.
 		/// 2. 프로그램 Runtime시 즉시 메모리에 객체가 올라가는게 아닌 Instance를 호출시 메모리에 올리는 
 		///		방식.
 		/// </summary>
-		private static readonly Lazy<LogView> _instance = new Lazy<LogView>(() => new LogView());
 		public static LogView Instance { get => _instance.Value; }
 		private LogView()
 		{
 
-			this._logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+			_logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
 			Directory.CreateDirectory(_logDirectory);
 			string timeStamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 			_logFilePath = Path.Combine(_logDirectory, $"ServerLog_{timeStamp}.txt");
@@ -48,7 +47,8 @@ namespace NETSIM_ConsoleView.LogMonitor
 			// 한글 경로 등에서 깨지지 않게 UTF8로 파일 생성
 			File.AppendAllText(_logFilePath, cmdCommand, Encoding.UTF8);
 			File.AppendAllText(_logFilePath, "-- Log Started --- \n");
-			_ = Run();
+
+			Task MonitorTask = Run();
 
 		}
 		#endregion
@@ -100,8 +100,6 @@ namespace NETSIM_ConsoleView.LogMonitor
 				CreateNoWindow = false
 			};
 			Process.Start(psi);
-
-			
 		}
 
 		public void WriteLogFile(ELogType type, string body)

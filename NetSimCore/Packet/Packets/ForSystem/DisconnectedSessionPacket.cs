@@ -1,11 +1,6 @@
-﻿using NETSIM.Types.Enum;
+﻿using NETSIM.Packet.Tool;
+using NETSIM.Types.Enum;
 using NETSIM.Types.Interface;
-using NETSIM.Packet.Tool;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.Packet.Packets.ForSystem
 {
@@ -16,18 +11,21 @@ namespace NETSIM.Packet.Packets.ForSystem
 		// Data
 		public uint Tick { get; private set; }
 		public int SessionID { get; private set; }
+		public int Generation { get; private set; }
 		public long DisconnectedTime { get; private set; }
 
-		public C2S_DisconnectedSession(uint tick ,int sessionID , long disconnectedTime)
+		public C2S_DisconnectedSession(uint tick, int sessionID, int generation, long disconnectedTime)
 		{
-			this.Tick = tick;
-			this.SessionID = sessionID;
-			this.DisconnectedTime = disconnectedTime;
+			Tick = tick;
+			SessionID = sessionID;
+			Generation = generation;
+			DisconnectedTime = disconnectedTime;
 		}
 		public void Serialize(PacketWriter writer)
 		{
 			writer.Write(Tick);
 			writer.Write(SessionID);
+			writer.Write(Generation);
 			writer.Write(DisconnectedTime);
 		}
 		public static C2S_DisconnectedSession Deserialize(PacketReader reader)
@@ -36,6 +34,7 @@ namespace NETSIM.Packet.Packets.ForSystem
 			{
 				Tick = reader.ReadUInt(),
 				SessionID = reader.ReadInt(),
+				Generation = reader.ReadInt(),
 				DisconnectedTime = reader.ReadLong()
 			};
 		}
@@ -47,19 +46,19 @@ namespace NETSIM.Packet.Packets.ForSystem
 		public EPacketID packetID => EPacketID.S_Disconnect;
 		// Data
 		public uint Tick { get; private set; }
-		public int SessionID { get; private set; }
+		public int PlayerID { get; private set; }
 		public long DisconnectedTime { get; private set; }
 
-		public S2C_DisconnectedSession(uint tick, int sessionID, long disconnectedTime)
+		public S2C_DisconnectedSession(uint tick, int playerID, long disconnectedTime)
 		{
-			this.Tick = tick;
-			this.SessionID = sessionID;
-			this.DisconnectedTime = disconnectedTime;
+			Tick = tick;
+			PlayerID = playerID;
+			DisconnectedTime = disconnectedTime;
 		}
 		public void Serialize(PacketWriter writer)
 		{
 			writer.Write(Tick);
-			writer.Write(SessionID);
+			writer.Write(PlayerID);
 			writer.Write(DisconnectedTime);
 		}
 		public static S2C_DisconnectedSession Deserialize(PacketReader reader)
@@ -67,7 +66,7 @@ namespace NETSIM.Packet.Packets.ForSystem
 			return new S2C_DisconnectedSession
 			{
 				Tick = reader.ReadUInt(),
-				SessionID = reader.ReadInt(),
+				PlayerID = reader.ReadInt(),
 				DisconnectedTime = reader.ReadLong()
 			};
 		}

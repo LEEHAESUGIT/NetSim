@@ -1,10 +1,5 @@
-﻿using NETSIM.Types.Enum;
-using NETSIM.Packet.Tool;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using NETSIM.Packet.Tool;
+using NETSIM.Types.Enum;
 
 
 namespace NETSIM.Packet.Packets

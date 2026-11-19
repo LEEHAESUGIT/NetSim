@@ -1,14 +1,7 @@
-﻿using NETSIM.Domain.State;
+﻿using NETSIM.Common;
+using NETSIM.Domain.State;
 using NETSIM.Types.Enum;
-using Shared.Configration;
 using Shared.Enum;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace NETSIM.MeasureCore.Measure
 {
@@ -26,8 +19,8 @@ namespace NETSIM.MeasureCore.Measure
 		}
 		#endregion
 
-		private const int SessionMin = ServerConfigurationData.SessionMin;
-		private const int SessionMax = ServerConfigurationData.SessionMax;
+		private int SessionMin = ServerDataConfigration.MinSessionCount;
+		private int SessionMax = ServerDataConfigration.MaxSessionCount;
 
 		private SessionState[] _states = new SessionState[8];
 		internal ReadOnlySpan<SessionState> States => _states.AsSpan();
@@ -71,7 +64,7 @@ namespace NETSIM.MeasureCore.Measure
 		}
 		#endregion
 		#region PlayerColor
-		internal void OnPlayerColor(int sessionID , EPlayerColor color)
+		internal void OnPlayerColor(int sessionID, EPlayerColor color)
 		{
 			if (sessionID > SessionMax || sessionID < SessionMin)
 				return;

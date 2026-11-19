@@ -1,10 +1,5 @@
 ﻿using NETSIM.Types.Enum;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.GameCore.GameRoom.GameEntity.Snapshots
 {
@@ -52,6 +47,20 @@ namespace NETSIM.GameCore.GameRoom.GameEntity.Snapshots
 			Direction = direction;
 		}
 	}
+	internal struct TickRecordOfPlayer
+	{
+		internal ClientInfoSnapshot ClientInfo { get; private set; }
+		internal PlayerInfoSnapshot PlayerInfo { get; private set; }
+		internal PlayerStatusSnapshot PlayerStatus { get; private set; }
+		internal PlayerMovementSnapshot PlayerTransform { get; private set; }
 
+		internal TickRecordOfPlayer(ClientInfoSnapshot clientInfo, PlayerInfoSnapshot playerInfo, PlayerStatusSnapshot playerStatus, PlayerMovementSnapshot playerTransform)
+		{
+			ClientInfo = clientInfo;
+			PlayerInfo = playerInfo;
+			PlayerStatus = playerStatus;
+			PlayerTransform = playerTransform;
+		}
+	}
 
 }

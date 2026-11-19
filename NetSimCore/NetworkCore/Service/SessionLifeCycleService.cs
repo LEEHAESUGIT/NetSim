@@ -1,14 +1,8 @@
-using Microsoft.Win32;
 using NETSIM.NetworkCore.Manager;
-using NETSIM.Pipe;
+using NETSIM.Pipe.PacketPipe;
 using NETSIM.Sockets;
 using NETSIM_ConsoleView.LogMonitor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.NetworkCore.Service
 {
@@ -16,15 +10,12 @@ namespace NETSIM.NetworkCore.Service
 	{
 		private SessionManager _sessionManager;
 
+		internal Task HeartbeatCycleAsync(CancellationToken token) => SessionHeartbeatCycle(token);
+
 
 		internal SessionLifeCycleService(SessionManager sessionManager)
 		{
 			_sessionManager = sessionManager;
-		}
-
-		internal void Start(CancellationToken shutDownToken)
-		{
-			_ = SessionHeartbeatCycle(shutDownToken);
 		}
 
 
@@ -43,18 +34,23 @@ namespace NETSIM.NetworkCore.Service
 						//LogView.Instance.WriteLogFile(ELogType.DEBUG , $"{currentTick - session.LastHeartBeatTick}");
 						if (currentTick - session.LastHeartBeatTick > 15000) // 15sec == 15000ms
 						{
-							OnSessionDisconnected(session.SessionID);
+							session.RequestStop();
+							//OnSessionDisconnected(session.SessionID);
 							LogView.Instance.WriteLogFile(ELogType.INFO, $"Session Heartbeat Timer Over. Session : {session.SessionID}");
 						}
 					}
 				}
+			}
+			catch (OperationCanceledException)
+			{
+				// 정상종료
+				LogView.Instance.WriteLogFile(ELogType.DEBUG, $"SessionHeartbeatCycle Exit Sucess");
 			}
 			catch (Exception ex)
 			{
 				LogView.Instance.WriteLogFile(ELogType.ERROR, $"SessionHeartbeatCycle error:{ex}");
 			}
 		}
-
 
 		internal void OnSessionConnected(TcpClient client, ModulePipe modulePipe, CancellationToken serverShutDownToken)
 		{
@@ -67,10 +63,7 @@ namespace NETSIM.NetworkCore.Service
 				LogView.Instance.WriteLogFile(ELogType.ERROR, $"OnSessionConnected error:{ex}");
 			}
 		}
-		internal void OnSessionDisconnected(int sessionID)
-		{
-			_sessionManager.DeactivationSession(sessionID);
-		}
+
 
 
 	}

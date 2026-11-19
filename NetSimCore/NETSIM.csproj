@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Pipe\PipeDispatch\SendPacketDispatch.cs" />
+    <None Include="Pipe\PacketDispatch\SendPacketDispatch.cs" />
   </ItemGroup>
 
   <ItemGroup>

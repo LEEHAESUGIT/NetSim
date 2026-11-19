@@ -1,10 +1,5 @@
 ﻿using Shared.Enum;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.Domain.State
 {
@@ -28,6 +23,6 @@ namespace NETSIM.Domain.State
 
 		internal void OnTimer() => _sw.Restart();
 		internal void OffTimer() => _sw.Stop();
-		
+
 	}
 }

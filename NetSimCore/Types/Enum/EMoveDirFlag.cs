@@ -1,8 +1,3 @@
-
-
-
-using System;
-
 namespace NETSIM.Types.Enum
 {
 	[Flags]

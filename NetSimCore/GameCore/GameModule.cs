@@ -1,32 +1,25 @@
 ﻿using NETSIM.GameCore.GameRoom;
 using NETSIM.GameCore.Manager;
-using NETSIM.GameCore.Service;
-using NETSIM.Types.Interface;
-using NETSIM.Pipe;
+using NETSIM.Pipe.EventPipe;
+using NETSIM.Pipe.PacketPipe;
 using NETSIM.Router;
 using NETSIM.Router.Handle;
 using NETSIM.Router.Init;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static NETSIM.GameCore.GameRoom.TickBuffer.WorldSnapShot;
+using NETSIM_ConsoleView.LogMonitor;
 
 namespace NETSIM.GameCore
 {
-	internal class GameModule : IModule
+	internal class GameModule
 	{
 		// Local
-		private CancellationTokenSource _cts;
+		private CancellationToken _serverShutdownToken;
 
 		// Manager
 		private PlayerManager _playerManager;
 
 		// Pipe
 		private ModulePipe _modulePipe;
-		// Service
-		private PlayerLifeCycleService _playerLifeCycleService;
+
 
 		// Router
 		private GameHandle _gameHandle;
@@ -34,18 +27,17 @@ namespace NETSIM.GameCore
 		private GamePacketRouterInit _gamePacketRouterInit;
 
 
-		// TickRecord
-		private WorldTickBuffer _worldTickBuffer;
-
-
 		// Room
-		private Room _gameRoomModel;
+		private Room _gameRoom;
 
 
-		internal GameModule(ModulePipe modulePipe, CancellationTokenSource serverCTS)
+		private Task? _tickRateUpdateAsyncTask;
+
+
+		internal GameModule(ModulePipe modulePipe, EventDispatchPipe eventPipe, CancellationToken shutdownToken)
 		{
 			//	Local
-			_cts = serverCTS;
+			_serverShutdownToken = shutdownToken;
 
 			// Manager
 			_playerManager = new PlayerManager();
@@ -53,20 +45,38 @@ namespace NETSIM.GameCore
 			// Pipe
 			_modulePipe = modulePipe;
 
-			_worldTickBuffer = new WorldTickBuffer();
 
-			_gameHandle = new GameHandle(_worldTickBuffer, _playerManager);
+			_gameHandle = new GameHandle(_playerManager);
 			_gamePacketRouterInit = new GamePacketRouterInit(_gameHandle);
 			_gamePacketRouter = new GamePacketRouter(_gamePacketRouterInit.InitIngamePacketRouter());
 
 
-			_gameRoomModel = new Room(64, _worldTickBuffer, _modulePipe, _playerManager, _gamePacketRouter);
-			// Service
-			_playerLifeCycleService = new PlayerLifeCycleService(_playerManager);
+			_gameRoom = new Room(_modulePipe, eventPipe, _playerManager, _gamePacketRouter);
+
 		}
 		public void Start()
 		{
-			_gameRoomModel.Start(_cts.Token);
+			_tickRateUpdateAsyncTask = _gameRoom.TickRateUpdateAsync(_serverShutdownToken);
+		}
+
+
+		internal async Task Stop()
+		{
+			if (_tickRateUpdateAsyncTask is not null)
+			{
+				try
+				{
+					await Task.WhenAll(_tickRateUpdateAsyncTask);
+				}
+				catch (OperationCanceledException)
+				{
+					LogView.Instance.WriteLogFile(ELogType.DEBUG, $" Sucess Stop _tickRateUpdate Async");
+				}
+				catch (Exception ex)
+				{
+					LogView.Instance.WriteLogFile(ELogType.ERROR, $"TickRateUpdateAsyncTask Stop Exception :  {ex}");
+				}
+			}
 		}
 	}
 }

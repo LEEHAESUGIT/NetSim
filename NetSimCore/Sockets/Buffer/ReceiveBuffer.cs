@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace NETSIM.Sockets.Buffer
 {
 	internal class ReceiveBuffer
@@ -25,16 +19,16 @@ namespace NETSIM.Sockets.Buffer
 		}
 		internal bool OnWrite(int bytes)
 		{
-			if (bytes < 0 || bytes > FreeSize)	return false;
-			
+			if (bytes < 0 || bytes > FreeSize) return false;
+
 			_writePos += bytes;
-			
+
 			return true;
 		}
 		internal bool OnRead(int bytes)
 		{
-			if (bytes < 0 || bytes > Datasize)	return false;
-			
+			if (bytes < 0 || bytes > Datasize) return false;
+
 			// readpos == writepos 면 논리적으로는 공간이 있지만 실제 남은 공간사용을 위해
 			_readPos += bytes;
 			if (Datasize == 0)
@@ -47,7 +41,7 @@ namespace NETSIM.Sockets.Buffer
 
 		internal bool TryWritePrepare(int packetLength)
 		{
-			if (FreeSize >= packetLength)	return true;
+			if (FreeSize >= packetLength) return true;
 
 			Compact();
 
@@ -56,11 +50,11 @@ namespace NETSIM.Sockets.Buffer
 
 		private void Compact()
 		{
-			if (_readPos == 0)	return;
+			if (_readPos == 0) return;
 
 			int dataSize = Datasize;
 
-			ReadOnlySpan<byte> dataSpan = _container.AsSpan(_readPos , Datasize);
+			ReadOnlySpan<byte> dataSpan = _container.AsSpan(_readPos, Datasize);
 			Span<byte> freeSpan = _container.AsSpan(0);
 
 			dataSpan.CopyTo(freeSpan);

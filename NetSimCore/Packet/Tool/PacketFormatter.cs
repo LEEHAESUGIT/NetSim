@@ -1,15 +1,10 @@
-﻿using NETSIM.Types.Enum;
-using NETSIM.Types.Interface;
-using NETSIM.Packet.Packets;
+﻿using NETSIM.Packet.Packets;
 using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Packet.Packets.ForSystem;
-using System;
+using NETSIM.Types.Enum;
+using NETSIM.Types.Interface;
 using System.Buffers.Binary;
 using System.Collections.Frozen;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.Packet.Tool
 {
@@ -108,7 +103,7 @@ namespace NETSIM.Packet.Tool
 			tempInitParseMap.Add(EPacketID.C_PlayableObjectSpawn, (_packetReader) => C2S_PlayableObjectSpawnRequest.Deserialize(_packetReader));
 			tempInitParseMap.Add(EPacketID.C_Move, (_packetReader) => C2S_MovePacket.Deserialize(_packetReader));
 
-
+			tempInitParseMap.Add(EPacketID.C_Disconnect, (_packetReader) => C2S_DisconnectedSession.Deserialize(_packetReader));
 			tempInitParseMap.Add(EPacketID.C_HeartBeat, (_packetReader) => C2S_HeartBeat.Deserialize(_packetReader));
 			tempInitParseMap.Add(EPacketID.C_Init, (_packetReader) => C2S_InitRequest.Deserialize(_packetReader));
 

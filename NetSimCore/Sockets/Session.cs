@@ -1,25 +1,15 @@
+using NETSIM.Common;
 using NETSIM.MeasureCore.Measure;
-using NETSIM.Types.Interface;
-using NETSIM.Packet.Packets;
 using NETSIM.Packet.Tool;
-using NETSIM.Pipe;
-using NETSIM.Pipe.PipeDispatch;
+using NETSIM.Pipe.PacketDispatch;
+using NETSIM.Pipe.PacketPipe;
 using NETSIM.Sockets.Buffer;
+using NETSIM.Types.Interface;
 using NETSIM_ConsoleView.LogMonitor;
-using Shared.Configration;
 using Shared.Enum;
-using System;
 using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace NETSIM.Sockets
 {
@@ -31,13 +21,14 @@ namespace NETSIM.Sockets
 		//private PacketBufferSystem _packetBuffer;
 
 		private ReceiveBuffer _receiveBuff;
-
-
 		private PacketFormatter _formatter;
 
-		private int _disconnectedLock = 0; // 1 일때 lock
 		internal int SessionID { get; init; }
-		
+		private int _sessionGeneration = 0;
+		internal int Generation => _sessionGeneration;
+
+		private int _disconnectedLock = 0;
+
 		internal long LastHeartBeatTick { get; set; }
 		internal DateTime LastHeartBeatTime { get; set; }
 
@@ -50,114 +41,191 @@ namespace NETSIM.Sockets
 		private ModulePipe _modulePipe;
 
 
-		internal Action<int> OnDisconnected;
+		//internal Action<int> OnDisconnected;
 
 
 		internal Session(int sessionID)
 		{
-			this.SessionID = sessionID;
-			//this._packetBuffer = new PacketBufferSystem(4096);
-
-			this._receiveBuff = new ReceiveBuffer(4096);
-			this._formatter = new PacketFormatter();
+			SessionID = sessionID;
 		}
 
 		internal void Init(TcpClient client, ModulePipe modulePipe, CancellationToken serverShutDownToken)
 		{
-			this._client = client;
-			this._stream = client.GetStream();
+			_receiveBuff = new ReceiveBuffer(4096);
+			_formatter = new PacketFormatter();
 
-			this._sessionCts = new CancellationTokenSource();
-			this._linkedCts = CancellationTokenSource.CreateLinkedTokenSource(serverShutDownToken, _sessionCts.Token);
-			this._loopToken = _linkedCts.Token;
+			_client = client;
+			_stream = client.GetStream();
 
-			this._modulePipe = modulePipe;
+			_sessionCts = new CancellationTokenSource();
+			_linkedCts = CancellationTokenSource.CreateLinkedTokenSource(serverShutDownToken, _sessionCts.Token);
+			_loopToken = _linkedCts.Token;
 
-			this._disconnectedLock = 0;
+			_modulePipe = modulePipe;
+
+			_disconnectedLock = 0;
 
 			LastHeartBeatTick = Environment.TickCount64;
 			client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
+			Interlocked.Increment(ref _sessionGeneration);
 		}
 
-		internal void Disconnect()
+		internal void InitClearToken()
+		{
+			_linkedCts.Dispose();
+			_sessionCts.Dispose();
+
+		}
+
+
+
+
+		//internal void Disconnect()
+		//{
+		//	if (Interlocked.Exchange(ref _disconnectedLock, 1) == 1) return;
+
+		//	try
+		//	{
+		//		LogView.Instance.WriteLogFile(ELogType.INFO, $"PlayerDisconnect {SessionID}");
+		//		_sessionCts?.Cancel();
+
+		//		Stop();
+		//		Clear();
+		//		//OnDisconnected?.Invoke(SessionID);
+		//	}
+		//	catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
+		//}
+
+
+
+		//private void Clear()
+		//{
+		//	if (_stream != null && _client != null)
+		//	{
+		//		_stream?.Close();
+		//		_client?.Close();
+		//	}
+		//	_stream = null;
+		//	_client = null;
+
+		//	_linkedCts.Dispose();
+		//	_sessionCts.Dispose();
+
+		//	_modulePipe = null;
+
+		//	_receiveBuff.Clear();
+
+		//	ClearSendPipe();
+
+		//	SessionMeasure.Instance.Clear(SessionID);
+		//}
+
+
+
+		internal void Start()
+		{
+			SessionMeasure.Instance.OnTimer(SessionID);
+			SessionMeasure.Instance.OnSessionID(SessionID);
+			SessionMeasure.Instance.OnStateLight(SessionID, EStateLight.GREEN);
+		}
+
+		internal void Stop()
+		{
+			SessionMeasure.Instance.OnStateLight(SessionID, EStateLight.NONE);
+			SessionMeasure.Instance.OffTimer(SessionID);
+
+		}
+
+		internal void RequestStop()
 		{
 			if (Interlocked.Exchange(ref _disconnectedLock, 1) == 1) return;
 
 			try
 			{
-				LogView.Instance.WriteLogFile(ELogType.INFO , $"PlayerDisconnect {this.SessionID}");
-				_sessionCts?.Cancel();
-
-				Stop();
-				Clear();
-				OnDisconnected?.Invoke(this.SessionID);
+				_sessionCts.Cancel();
 			}
-			catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
-		}
+			catch (Exception ex)
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"_sessionCts.Cancel : {ex}");
+			}
 
+			try
+			{
+				_client.Close();
+			}
+			catch (Exception ex)
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"_client.Close : {ex}");
+			}
+			Stop();
+
+
+		}
+		internal async Task RunAsync()
+		{
+			Task SendLoopAsyncTask = SendLoopAsync();
+			Task ReceivedLoopAsyncTask = ReceivedLoopAsync();
+
+			await Task.WhenAny(SendLoopAsyncTask, ReceivedLoopAsyncTask);
+
+			RequestStop();
+
+			try
+			{
+				await Task.WhenAll(SendLoopAsyncTask, ReceivedLoopAsyncTask);
+			}
+			catch (OperationCanceledException) when (_loopToken.IsCancellationRequested)
+			{
+				// 이 세션에 요청된 취소로 루프가 종료됨
+			}
+			finally
+			{
+				Clear();
+			}
+		}
 		private void Clear()
 		{
-			if (this._stream != null && this._client != null)
-			{
-				this._stream?.Close();
-				this._client?.Close();
-			}
-			this._stream = null;
-			this._client = null;
-
-			this._linkedCts.Dispose();
-			this._sessionCts.Dispose();
-
-			this._modulePipe = null;
-
-			this._receiveBuff.Clear();
-
 			ClearSendPipe();
+			_modulePipe = null;
 
-			SessionMeasure.Instance.Clear(SessionID);
+			_linkedCts.Dispose();
+			_sessionCts.Dispose();
+			_client.Dispose();
 		}
 
 
-		internal void Start()
-		{
-			SessionMeasure.Instance.OnTimer(this.SessionID);
-			SessionMeasure.Instance.OnSessionID(this.SessionID);
-			SessionMeasure.Instance.OnStateLight(this.SessionID, EStateLight.GREEN);
-			_ = SendLoopAsync();
-			_ = ReceivedLoopAsync();
-		}
 
-		internal void Stop()
-		{
-
-			SessionMeasure.Instance.OnStateLight(this.SessionID, EStateLight.NONE);
-			SessionMeasure.Instance.OffTimer(this.SessionID);
-
-		}
-
-	
-
+		#region Send
 		private Channel<ReadOnlyMemory<byte>> _sendPipe = Channel.CreateUnbounded<ReadOnlyMemory<byte>>();
-		internal bool InputPacketData(ReadOnlyMemory<byte> context) => _sendPipe.Writer.TryWrite(context);
+		internal bool InputPacketData(ReadOnlyMemory<byte> context)
+		{
+			if (_disconnectedLock == 1)
+				return false;
+			else
+			{
+				return _sendPipe.Writer.TryWrite(context);
+			}
+		}
 		private void ClearSendPipe()
 		{
 			while (_sendPipe.Reader.TryRead(out _)) { }
 		}
 		private async Task SendLoopAsync()
 		{
-			while(await _sendPipe.Reader.WaitToReadAsync(_loopToken))
+			while (await _sendPipe.Reader.WaitToReadAsync(_loopToken))
 			{
 				while (_sendPipe.Reader.TryRead(out ReadOnlyMemory<byte> packetData))
 				{
 					if (_disconnectedLock == 1) return;
 
-					await _stream.WriteAsync(packetData);
+					await _stream.WriteAsync(packetData, _loopToken);
+					ServerMeasure.Instance.OnAddSendByteLength(packetData.Length);
 				}
 			}
 		}
-
-
+		#endregion
+		#region Received
 		private async Task ReceivedLoopAsync()
 		{
 			try
@@ -172,10 +240,13 @@ namespace NETSIM.Sockets
 					}
 
 					int received = await _stream.ReadAsync(_receiveBuff.WriteSpace, _loopToken);
-					if (received <= 0 || _disconnectedLock == 1)
+					ServerMeasure.Instance.OnAddRecvByteLength((long)received);
+					if (_disconnectedLock == 1)
+						return;
+					if (received == 0)
 					{
-						LogView.Instance.WriteLogFile(ELogType.WARN , $"received packet is small than zero. ID : {SessionID} , size : {received}");
-						Disconnect();
+						LogView.Instance.WriteLogFile(ELogType.INFO, $"Peer closed connection. SessionID: {SessionID} ");
+						RequestStop();
 						break;
 					}
 
@@ -186,17 +257,40 @@ namespace NETSIM.Sockets
 			}
 			catch (OperationCanceledException)
 			{
-				Console.WriteLine($"정상적인 해제 {this.SessionID}");
+				Console.WriteLine($"정상적인 해제 {SessionID}");
 			}
 			catch (Exception ex)
 			{
 				//Console.WriteLine($"[수신 에러] SessionID: {SessionID}, 원인: {ex.Message}");
-				LogView.Instance.WriteLogFile(ELogType.ERROR , $"[수신 에러] SessionID: {SessionID}, 원인: {ex.Message}");
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"[수신 에러] SessionID: {SessionID}, 원인: {ex.Message}");
 			}
+			//catch (IOException ex)
+			//	when (ex.InnerException is SocketException socketEx
+			//	  && socketEx.SocketErrorCode == SocketError.ConnectionReset)
+			//{
+			//	LogView.Instance.WriteLogFile(
+			//		ELogType.WARN,
+			//		$"Connection reset by peer. " +
+			//		$"SessionID: {SessionID}, Generation: {Generation}, " +
+			//		$"SocketError: {socketEx.SocketErrorCode}, " +
+			//		$"NativeError: {socketEx.NativeErrorCode}, " +
+			//		$"StopRequested: {_loopToken.IsCancellationRequested}. " +
+			//		$"{ex}");
+			//}
+			//catch (Exception ex)
+			//{
+			//	LogView.Instance.WriteLogFile(
+			//		ELogType.ERROR,
+			//		$"Receive loop failed. " +
+			//		$"SessionID: {SessionID}, Generation: {Generation}, " +
+			//		$"StopRequested: {_loopToken.IsCancellationRequested}. " +
+			//		$"{ex}");
+			//}
 			finally
 			{
-				LogView.Instance.WriteLogFile(ELogType.INFO , $"Token Close {SessionID}");
-				Disconnect();
+				LogView.Instance.WriteLogFile(ELogType.INFO, $"Token Close {SessionID}");
+				//Disconnect();
+				//OnDisconnected.Invoke(SessionID);
 			}
 		}
 
@@ -210,10 +304,10 @@ namespace NETSIM.Sockets
 				// 헤더 크기 파싱
 				ushort PacketSize = BinaryPrimitives.ReadUInt16LittleEndian(_receiveBuff.ReadSpace);
 
-				if (PacketSize >= ServerConfigurationData.MaxPacketSize)
+				if (PacketSize >= ServerDataConfigration.ReceivedMaxPacketSize)
 				{
-					LogView.Instance.WriteLogFile(ELogType.WARN , $"packetsize >= MaxPacketSize {SessionID}");
-					Disconnect();
+					LogView.Instance.WriteLogFile(ELogType.WARN, $"packetsize >= MaxPacketSize {SessionID}");
+					RequestStop();
 					return;
 				}
 
@@ -223,12 +317,12 @@ namespace NETSIM.Sockets
 
 				if (_formatter.TryParse(packetSpan, out IPacket? parsePacket))
 				{
-					BranchPacket(new ReceivePacketDispatch { SessionID = this.SessionID, Packet = parsePacket });
+					BranchPacket(new ReceivePacketDispatch(SessionID, Generation, parsePacket));
 				}
 				else
 				{
-					LogView.Instance.WriteLogFile(ELogType.WARN , $"Failed Packet Parse{SessionID}");
-					Disconnect();
+					LogView.Instance.WriteLogFile(ELogType.WARN, $"Failed Packet Parse{SessionID}");
+					RequestStop();
 					return;
 				}
 				_receiveBuff.OnRead(PacketSize);
@@ -252,6 +346,7 @@ namespace NETSIM.Sockets
 				return;
 			}
 		}
+		#endregion
 
 
 	}

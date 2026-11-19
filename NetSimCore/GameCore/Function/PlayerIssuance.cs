@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
 
 namespace NETSIM.GameCore.Function
 {
@@ -27,7 +21,7 @@ namespace NETSIM.GameCore.Function
 
 		internal bool PlayerIDRelease(int playerID)
 		{
-			if(_playerLiveIDs.Remove(playerID))
+			if (_playerLiveIDs.Remove(playerID))
 			{
 				return true;
 			}

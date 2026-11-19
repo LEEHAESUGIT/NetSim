@@ -1,24 +1,18 @@
-﻿using NETSIM.Types.Interface;
-using NETSIM.NetworkCore.Manager;
+﻿using NETSIM.NetworkCore.Manager;
 using NETSIM.NetworkCore.Service;
-using NETSIM.Pipe;
-using NETSIM.Sockets;
+using NETSIM.Pipe.EventPipe;
+using NETSIM.Pipe.PacketPipe;
 using NETSIM_ConsoleView.LogMonitor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.NetworkCore
 {
-	internal class NetworkModule : IModule
+	internal class NetworkModule
 	{
 		// Local
 		private readonly TcpListener _listner;
-		private CancellationTokenSource _cts;
+		private CancellationToken _serverShutdownToken;
 
 		// Manager
 		private SessionManager _sessionManager;
@@ -30,14 +24,20 @@ namespace NETSIM.NetworkCore
 		private SessionLifeCycleService _sessionLifeCycleService;
 		private PacketService _packetService;
 
-		internal NetworkModule(int portNum, ModulePipe modulePipe, CancellationTokenSource serverCTS)
+
+		internal Task RunAcceptAsync(CancellationToken token) => AcceptLoopAsync(token);
+
+		private Task? _heartbeatCycleAsyncTask;
+
+
+
+		internal NetworkModule(int portNum, ModulePipe modulePipe, EventDispatchPipe eventPipe, CancellationToken shutdownToken)
 		{
 			//Local
 			_listner = new TcpListener(IPAddress.Any, portNum);
-			_cts = serverCTS;
-
+			_serverShutdownToken = shutdownToken;
 			// Manager
-			_sessionManager = new SessionManager();
+			_sessionManager = new SessionManager(eventPipe, shutdownToken);
 
 			// Pipe
 			_moudlePipe = modulePipe;
@@ -50,37 +50,81 @@ namespace NETSIM.NetworkCore
 		public void Start()
 		{
 			_listner.Start();
-			_sessionLifeCycleService.Start(_cts.Token);
-			_packetService.Start(_cts.Token);
 
-			_ = AcceptLoopAsync(_cts.Token);
+			_heartbeatCycleAsyncTask = _sessionLifeCycleService.HeartbeatCycleAsync(_serverShutdownToken);
+
+
+			_packetService.Start(_serverShutdownToken);
 		}
 
-		public void Stop()
+		public async Task Stop()
 		{
-			_listner.Stop();
-			_cts.Cancel();
-		}
+			try
+			{
+				_listner.Stop();
+			}
+			catch (SocketException ex)
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"_listner Stop Exception :  {ex}");
+			}
 
-		public async Task AcceptLoopAsync(CancellationToken ct)
-		{
-			while (!ct.IsCancellationRequested)
+			try
+			{
+				_sessionManager.ServerShutDown();
+			}
+			catch (Exception ex)
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"_sessions Stop Exception :  {ex}");
+			}
+
+			try
+			{
+				await _packetService.Stop();
+			}
+			catch (Exception ex)
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"_packetService Stop Exception :  {ex}");
+			}
+
+			if (_heartbeatCycleAsyncTask is not null)
 			{
 				try
 				{
-					TcpClient client = await _listner.AcceptTcpClientAsync(ct);
-					client.NoDelay = true;
-					_ = Task.Run(() =>
-					{
-						_sessionLifeCycleService.OnSessionConnected(client, _moudlePipe, _cts.Token);
-					}, ct);
-
-					LogView.Instance.WriteLogFile(ELogType.INFO, $"TryAcceptClient : {client}");
+					await Task.WhenAll(_heartbeatCycleAsyncTask);
 				}
 				catch (Exception ex)
 				{
-					LogView.Instance.WriteLogFile(ELogType.ERROR, $"Fail Accept Client, {ex}");
+					LogView.Instance.WriteLogFile(ELogType.ERROR, $"HeartBeat Task Stop Exception :  {ex}");
 				}
+			}
+
+			try
+			{
+				await _sessionManager.SessionsAsyncExitWait();
+			}
+			catch (Exception ex)
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"_sesionManager Async Clear Exception :  {ex}");
+			}
+
+			finally
+			{
+				_listner?.Dispose();
+			}
+		}
+
+
+
+		private async Task AcceptLoopAsync(CancellationToken shutDownToken)
+		{
+			while (!shutDownToken.IsCancellationRequested)
+			{
+				TcpClient client = await _listner.AcceptTcpClientAsync(shutDownToken);
+				client.NoDelay = true;
+				_sessionLifeCycleService.OnSessionConnected(client, _moudlePipe, _serverShutdownToken);
+
+				LogView.Instance.WriteLogFile(ELogType.INFO, $"TryAcceptClient : {client}");
+
 			}
 		}
 	}

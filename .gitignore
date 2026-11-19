@@ -586,3 +586,6 @@ $RECYCLE.BIN/
 Logs/
 *.log
 *.txt
+
+# Personal agent instructions
+/AGENTS_ProjectReview.md

@@ -1,121 +1,81 @@
 ﻿using NETSIM.Common;
 using NETSIM.GameCore.GameRoom.GameEntity;
-using NETSIM.GameCore.GameRoom.TickBuffer;
 using NETSIM.GameCore.Manager;
-using NETSIM.Types.Enum;
-using NETSIM.Types.Interface;
+using NETSIM.MeasureCore.Measure;
 using NETSIM.Packet;
-using NETSIM.Packet.Packets.ForIngame;
-using NETSIM.Pipe;
-using NETSIM.Pipe.PipeDispatch;
+using NETSIM.Pipe.EventDispatch;
+using NETSIM.Pipe.EventPipe;
+using NETSIM.Pipe.PacketDispatch;
+using NETSIM.Pipe.PacketPipe;
 using NETSIM.Router;
+using NETSIM.Types.Enum;
 using NETSIM_ConsoleView.LogMonitor;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static NETSIM.GameCore.GameRoom.TickBuffer.WorldSnapShot;
 
 namespace NETSIM.GameCore.GameRoom
 {
 	internal class Room
 	{
+		private readonly double _targetTickMS = ServerDataConfigration.OneSecMS / ServerDataConfigration.OneSecPerTickCount;
 
-		private PlayerManager _playerManager;
-
-		private readonly double _oneSecMS = 1000;
-		private readonly int _tickRate;
-		private readonly double _targetTickMS;
 		private double _timeDebt = 0;
-		private float _deltaTime;
-
-		private readonly double _maxAllowedDebtMS = -100.0;
-
-
-		private ModulePipe _modulePipe;
-		private GamePacketRouter _gamePacketRouter;
-
-
 		// Interpolation
 		private uint _tickCount = 0;
 
-		private WorldTickBuffer _worldTickBuffer;
+		private readonly Stopwatch _workTimeSW = new Stopwatch();
 
+		private readonly PlayerManager _playerManager;
+		private readonly ModulePipe _modulePipe;
+		private readonly EventDispatchPipe _eventPipe;
+		private readonly GamePacketRouter _gamePacketRouter;
 
-		internal Room(int tickRate,WorldTickBuffer worldTickBuffer ,  ModulePipe modulePipe, PlayerManager playerManager, GamePacketRouter gamePacketRouter)
+		internal Room(ModulePipe modulePipe, EventDispatchPipe eventPipe, PlayerManager playerManager, GamePacketRouter gamePacketRouter)
 		{
-			_worldTickBuffer = worldTickBuffer;
-
-			_tickRate = tickRate;
-			_deltaTime = 1f / tickRate;
-			_targetTickMS = _oneSecMS / _tickRate;
-
 			_modulePipe = modulePipe;
+			_eventPipe = eventPipe;
 			_playerManager = playerManager;
 			_gamePacketRouter = gamePacketRouter;
-
 		}
 
-
-		internal void Start(CancellationToken shutDownToken)
+		internal async Task TickRateUpdateAsync(CancellationToken shutDownToken)
 		{
-			_ = TickRateUpdateAsync(shutDownToken);
-		}
-
-
-		/// <summary>
-		/// 임시 TickRate 로직
-		/// TODO:
-		/// 리펙토링을 통한 로직분리와 TickRate의 모듈화(델리게이트 사용)
-		/// </summary>
-		/// <param name="shutDownToken"></param>
-		/// <returns></returns>
-		private async Task TickRateUpdateAsync(CancellationToken shutDownToken)
-		{
-			Stopwatch sw = new Stopwatch();
-
-
 			while (!shutDownToken.IsCancellationRequested)
 			{
-				sw.Restart();
-				// received packet process
-				PacketProcess();
-				// logic process
-				GameLogicUpdate();
-				// Interpolation	
-				if (_tickCount % 10 == 0)
-				{
-					PlayerTransformInterPolation();
-				}
-				// Tick Record
-				_worldTickBuffer.Record(_tickCount , new WorldSnapShot(_tickCount , _playerManager));
+				_workTimeSW.Restart();
 
-				// send Packet process
+				EventProcess();
+				ReceivedPacketProcess();
+				GameLogicUpdate();
+				// [틱 입력 적용] _tickCount는 이번 이동 계산을 마친 상태의 번호다.
+				// 기록과 아래 스냅샷 모두 같은 시점의 확정 위치를 사용한다.
+
+				// 틱마다 보간을 클라이언트들의 보간패킷을 브로드 캐스트 한다.
+				PlayerTransformInterPolation();
+
 				SystemPacketOperator.Instance.TakeOut(_modulePipe.SystemPacketPipe);
 				GamePacketOperator.Instance.TakeOut(_modulePipe.GamePacketPipe);
 
-				sw.Stop();
+				_workTimeSW.Stop();
 
 
-				double workTimeMS = sw.Elapsed.TotalMilliseconds;
+				double workTimeMS = _workTimeSW.Elapsed.TotalMilliseconds;
 
 				double timeDifference = _targetTickMS - workTimeMS;
 				_timeDebt += timeDifference;
 
 				if (_timeDebt > 0)
 				{
-					//LogView.Instance.WriteLogFile(ELogType.DEBUG , $"SleepTick TimeDebt : {_timeDebt}");
+					long start = Stopwatch.GetTimestamp();
+
 					await Task.Delay(TimeSpan.FromMilliseconds(_timeDebt), shutDownToken);
-					_timeDebt = 0;
+
+					double actualWaitMS = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+					_timeDebt -= actualWaitMS;
 				}
 				if (_timeDebt < 0)
 				{
-					// TODO : 과도한 debt 에서 바져나오는 로직 필요 
-					if (_timeDebt < _maxAllowedDebtMS)
+					if (_timeDebt < ServerDataConfigration.MaxAllowedDebtMS)
 					{
-
 						LogView.Instance.WriteLogFile(ELogType.WARN, $"OverTickRate! TimeDebt : {_timeDebt}");
 						_timeDebt = 0;
 					}
@@ -123,13 +83,32 @@ namespace NETSIM.GameCore.GameRoom
 
 				// IncreaseTick
 				LiveServerData.Instance.IncreamentServerTick(_tickCount);
+				ServerMeasure.Instance.OnTickCount();
 				Interlocked.Increment(ref _tickCount);
 			}
 		}
 
-		private void PacketProcess()
+
+		private void EventProcess()
 		{
-			int maxProcessCount = 500;
+			while (_eventPipe.NetToGamePipe.TryRead(out NetworkEventDispatch dispatch))
+			{
+
+				if (_playerManager.CheckGeneration(dispatch.SessionID, dispatch.Generation, out Player player))
+				{
+					if (dispatch.Event.EventID == EEventID.DISCONNECT)
+					{
+						_playerManager.DeletePlayer(player.PlayerID);
+						SystemPacketOperator.Instance.GenerateDisconnectedPacket(dispatch.SessionID, player.PlayerID, dispatch.Generation);
+						LogView.Instance.WriteLogFile(ELogType.INFO, $" DisconnectedEvent : {player.PlayerID}");
+					}
+				}
+			}
+		}
+
+		private void ReceivedPacketProcess()
+		{
+			int maxProcessCount = ServerDataConfigration.MaxPacketProcess;
 			int currentCount = 0;
 
 			while (currentCount < maxProcessCount && _modulePipe.GamePacketPipe.InBoundPipe.TryRead(out ReceivePacketDispatch context))
@@ -139,45 +118,45 @@ namespace NETSIM.GameCore.GameRoom
 			}
 		}
 
+		#region [틱 입력 적용] 서버 틱에서 입력 선택 및 위치 갱신
 		private void GameLogicUpdate()
 		{
-			// Move	
 			foreach (Player player in _playerManager.LivePlayers.Values)
 			{
-				player.UpdateLocation(_deltaTime);
-
-				if (player.NewMoveDirFlag != player.LastMoveDirFlag)
-				{
-					//GamePacketOperator.Instance.GenerateMovePacket(
-					//	player.ControllHaveSessionID,
-					//	player.PlayerID,
-					//	player.NewMoveDirFlag
-					//	);
-
-
-					//_gamePacketPipe.OutBoundPipe.TryWrite(
-					//	new ResultPacketContext(
-					//		ESendType.BROADCASTEXCEPT,
-					//		player.ControllHaveSessionID,
-					//		new S2C_MovePacket(player.PlayerID, player.NewMoveDirFlag)
-					//		));
-
-					player.SyncLastMoveFlag();
-				}
+				// 패킷 개수/지연 틱 수와 관계없이 한 플레이어를 고정 dt로 한 번만 이동시킨다.
+				// 미래 입력은 버퍼에 남기고, 이번 틱까지의 입력 중 최신 플래그를 사용한다.
+				player.SimulateMovement(_tickCount, LiveServerData.Instance.DeltaTime);
 			}
 		}
+		#endregion
 
 		private void PlayerTransformInterPolation()
 		{
 			if (_playerManager.LivePlayersCount == 0)
 				return;
 
-
+			// 원격 플레이어 표시용 전체 스냅샷은 기존 패킷을 유지한다.
 			GamePacketOperator.Instance.GenerateTransformInterpolationPacket(
 				_playerManager.LivePlayersCount,
 				_playerManager.CaptureAllPlayerInfo(),
 				_playerManager.CaptureAllPlayerTransform()
 				);
+
+			foreach (Player player in _playerManager.LivePlayers.Values)
+			{
+				if (!player.TickComponent.HasSimulatedInputTick)
+					//if (!player.HasSimulatedInputTick)
+					continue;
+
+				GamePacketOperator.Instance.GeneratePlayerMoveInterpolationPacket(
+					player.ControllHaveSessionID,
+					player.PlayerID,
+					player.Generation,
+					player.TickComponent.SimulatedClientTick,
+					player.CapturePlayerTransform()
+					);
+
+			}
 		}
 	}
 }

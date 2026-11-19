@@ -3,17 +3,22 @@ using NETSIM_ConsoleView.Configration;
 using Shared.DTO;
 using Shared.Enum;
 using Spectre.Console;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM_ConsoleView.Draw
 {
+	/// <summary>
+	/// DrawTool 기능 : <br/>
+	/// Server Table 생성 <br/>
+	/// Server Panel 생성 <br/>
+	/// Server Grid 생성 <br/>
+	/// Session Table 생성 <br/>
+	/// Session Panel 생성 <br/>
+	/// Session Grid 생성 <br/>
+	/// 빈 패널 생성 <br/>
+	/// 투명 패널 생성 <br/>
+	/// </summary>
 	internal class DrawTool
 	{
-
 		internal static Layout SetLayout()
 		{
 			Layout layout = new Layout();
@@ -21,10 +26,6 @@ namespace NETSIM_ConsoleView.Draw
 				new Layout(ConfigrationData.ServerLayoutText),
 				new Layout(ConfigrationData.SessionLayoutText)
 				);
-
-			//layout[ConfigrationData.ServerLayoutText].Update();
-			//layout[ConfigrationData.SessionLayoutText].Update();
-
 			return layout;
 		}
 
@@ -33,49 +34,47 @@ namespace NETSIM_ConsoleView.Draw
 			Panel panel;
 
 			if (dto.StateLight == EStateLight.NONE)
-				panel = emptyPanel();
+				panel = EmptyPanel();
 			else
 			{
-				Table table = createServerTable(dto);
+				Table table = CreateServerTable(dto);
 				panel = new Panel(table)
 					.Header(ViewTool.StateLightof(dto.StateLight));
 			}
-
 			return panel;
 		}
+
 		internal static Panel SetSessionPanel(SessionStateDTO dto)
 		{
 			Panel panel;
 
 			if (dto.StateLight == EStateLight.NONE)
-				panel = emptyPanel();
+				panel = EmptyPanel();
 			else
 			{
-				Table table = createSessionTable(dto);
+				Table table = CreateSessionTable(dto);
 				panel = new Panel(table)
 					.Header(ViewTool.StateLightof(dto.StateLight));
 			}
-
 			return panel;
 		}
 
 		internal static Grid SetServerGrid(Panel serverPanel)
 		{
 			Grid grid = new Grid();
-			for(int i = 0; i < 4; i++)
+			for (int i = 0; i < 4; i++)
 				grid.AddColumn(new GridColumn().PadLeft(1).PadRight(1));
 
 			grid.AddRow(
 				serverPanel,
-				invisiblePanel(),
-				invisiblePanel(),
-				invisiblePanel()
+				InvisiblePanel(),
+				InvisiblePanel(),
+				InvisiblePanel()
 				);
 			return grid;
 		}
 
-
-		internal static Grid SetSessionGrid(IReadOnlyDictionary<ESlotConfig , Panel> sessionPanels)
+		internal static Grid SetSessionGrid(IReadOnlyDictionary<ESlotConfig, Panel> sessionPanels)
 		{
 			Grid grid = new Grid();
 			for (int i = 0; i < 4; i++)
@@ -97,23 +96,21 @@ namespace NETSIM_ConsoleView.Draw
 			return grid;
 		}
 
-
-
-
-		private static Table createServerTable(ServerStateDTO dto)
+		private static Table CreateServerTable(ServerStateDTO dto)
 		{
 			Table table = new();
-			
+
 			table.AddColumn($"{dto.Name}")
 				.AddRow($"TPS : {dto.TPS}")
 				.AddRow($"Uptime : {dto.Uptime.ToString(@"dd\.hh\:mm\:ss")}")
 				.AddRow($"SessionEntity : {dto.SessionEntityCount}")
-				.AddRow($"Recv/s : {dto.RecvPerSec}")
-				.AddRow($"Send/s : {dto.SendPerSec}");
-			
+				.AddRow($"Recv : {dto.RecvPerSec} B/s")
+				.AddRow($"Send : {dto.SendPerSec} B/s");
+
 			return table;
 		}
-		private static Table createSessionTable(SessionStateDTO dto)
+
+		private static Table CreateSessionTable(SessionStateDTO dto)
 		{
 			Table table = new();
 
@@ -129,16 +126,15 @@ namespace NETSIM_ConsoleView.Draw
 			return table;
 		}
 
-		internal static Panel emptyPanel()
+		internal static Panel EmptyPanel()
 		{
-
 			Markup emptyMarkeUp = new Markup("\n\n[grey]Empty[/]\n\n");
 			Align alignedEmpty = Align.Center(emptyMarkeUp, VerticalAlignment.Middle);
 			Padder padder = new Padder(alignedEmpty, new Padding(0, 3));
 
 			return new Panel(padder).Header(ViewTool.StateLightof(EStateLight.NONE));
 		}
-		private static Panel invisiblePanel()
+		private static Panel InvisiblePanel()
 		{
 			Markup emptyMarkeUp = new Markup("");
 			Align alignedEmpty = Align.Center(emptyMarkeUp, VerticalAlignment.Middle);

@@ -1,57 +1,55 @@
-﻿
-using NETSIM_ConsoleView.Common.Tool;
-using NETSIM_ConsoleView.Configration;
-using NETSIM_ConsoleView.Draw;
-
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using NETSIM_ConsoleView.Draw;
 using Shared.DTO;
 using Shared.DTO.Function;
 
 namespace NETSIM_ConsoleView
 {
-	public class ConsoleView
+	/// <summary>
+	/// ConsoleView 기능 : <br/>
+	/// 콘솔 실행 <br/>
+	/// 콘솔 정지 <br/>
+	/// DTO 파일 수신 <br/>
+	/// </summary>
+	public static class ConsoleView
 	{
+		#region Static Variable
 		// Local
 		private static bool _isRefresh = true;
-		private static object _updateLock = new object();
+		//private static object _updateLock = new object();
 
 		// Manager
 		private static DrawManager _drawManager = new(ref _isRefresh);
+		#endregion
 
-		public static void Start()
+		#region
+		public static void OnConsoleMonitor()
 		{
-
 			var ConsoleTask = Task.Run(() =>
 			{
 				try
 				{
 					_drawManager.Live();
 				}
-				catch (Exception ex) { Console.WriteLine($"[Error] : {ex}"); }
+				catch (Exception ex)
+				{
+					Console.WriteLine($"[Error] : {ex}");
+				}
 			});
 		}
-		public void Stop() { }
+		public static void OffConsoleMonitor() { }
+		#endregion
 
+		#region Input Data
 		public static void PutServerStatus(string DTOjson)
 		{
-			lock (_updateLock)
-			{
-				_drawManager.ConversionServerState(DTOFunction.Deerializer<ServerStateDTO>(DTOjson));
-				_isRefresh = true;
-			}
+			_drawManager.ConversionServerState(DTOFunction.Deerializer<ServerStateDTO>(DTOjson));
+			_isRefresh = true;
 		}
 		public static void PutSessionsStatus(DTOWrappers<SessionStateDTO> sessionDTOs)
 		{
-			lock (_updateLock)
-			{
-				_drawManager.ConversionSessionStates(sessionDTOs.Items.AsSpan());
-				_isRefresh = true;
-			}
+			_drawManager.ConversionSessionStates(sessionDTOs.Items.AsSpan());
+			_isRefresh = true;
 		}
+		#endregion
 	}
 }

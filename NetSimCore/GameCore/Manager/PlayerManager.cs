@@ -1,18 +1,7 @@
-﻿using NETSIM.Common;
+﻿using NETSIM.GameCore.GameRoom.GameEntity;
 using NETSIM.GameCore.GameRoom.GameEntity.Snapshots;
-using NETSIM.GameCore.GameRoom.GameEntity;
-using NETSIM.GameCore.GameRoom.TickBuffer;
-using NETSIM.MeasureCore.Measure;
 using NETSIM.Types.Enum;
-using NETSIM.Packet.Packets.ForIngame;
-using NETSIM.Sockets;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace NETSIM.GameCore.Manager
 {
@@ -56,13 +45,14 @@ namespace NETSIM.GameCore.Manager
 		}
 
 
-		internal bool CreatePlayer(int issuanceID, int sessionID, EPlayerColor color)
+		internal bool CreatePlayer(int issuanceID, int sessionID, int generation, EPlayerColor color)
 		{
-			if(_players.Count >= 8 )
+			if (_players.Count >= 8)
 				return false;
 			Player createPlayer = null;
 			if (PopRecyclePlayerObject(out Player recylePlayer))
 			{
+				recylePlayer.Clear();
 				createPlayer = recylePlayer;
 			}
 			else
@@ -70,7 +60,7 @@ namespace NETSIM.GameCore.Manager
 				createPlayer = new Player(new DefaultPlayer());
 			}
 
-			createPlayer.Init(issuanceID, sessionID, color , new DefaultPlayer().MoveSpeed);
+			createPlayer.Init(issuanceID, sessionID, generation, color, new DefaultPlayer().MoveSpeed);
 
 			_players.TryAdd(issuanceID, createPlayer);
 			Interlocked.Increment(ref LivePlayersCount);
@@ -99,6 +89,33 @@ namespace NETSIM.GameCore.Manager
 			}
 			return false;
 		}
+
+		internal bool CheckGeneration(int sessionID, int generation, out Player targetPlayer)
+		{
+			foreach (Player player in _players.Values)
+			{
+				if (player.ControllHaveSessionID == sessionID)
+				{
+					if (player.Generation == generation)
+					{
+						targetPlayer = player;
+						return true;
+					}
+				}
+			}
+			targetPlayer = null;
+			return false;
+
+
+			//if(_players.TryGetValue(playerID , out Player player))
+			//{
+			//	if (player.Generation == generation)
+			//		return true;
+			//}
+			//return false;
+		}
+
+
 		internal void ForEachActionPlayer(Action<Player> foreachAction)
 		{
 			foreach (var player in _players.Values)
@@ -123,7 +140,7 @@ namespace NETSIM.GameCore.Manager
 		internal List<TickRecordOfPlayer> CaptureAll()
 		{
 			List<TickRecordOfPlayer> AllPlayerRecord = new List<TickRecordOfPlayer>(LivePlayersCount);
-			foreach(Player player in _players.Values)
+			foreach (Player player in _players.Values)
 			{
 				AllPlayerRecord.Add(new TickRecordOfPlayer(
 					player.CaptureClientInfo(),

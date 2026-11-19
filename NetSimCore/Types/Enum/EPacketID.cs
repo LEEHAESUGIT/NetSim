@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace NETSIM.Types.Enum
+﻿namespace NETSIM.Types.Enum
 {
 	// C : Client -> Server
 	// S : Server -> Client
@@ -18,6 +12,9 @@ namespace NETSIM.Types.Enum
 		S_NonPlayableObjectSpawn = 2,
 		S_LivePlayerRenewal = 3,
 		S_Move = 5,
+		S_Disconnect = 6,
+
+
 
 		S_Transform = 11,
 		S_AllInterpolation = 12,
@@ -26,6 +23,7 @@ namespace NETSIM.Types.Enum
 		C_PlayableObjectSpawn = 51,
 		C_NonPlayableObjectSpawn = 52,
 		C_Move = 55,
+		C_Disconnect = 56,
 		#endregion
 
 		#region SystemPacketID
@@ -33,13 +31,11 @@ namespace NETSIM.Types.Enum
 		// 101 ~ 199
 		S_HeartBeat = 101,
 		S_Init = 102,
-		S_Disconnect = 103,
-
 
 
 		C_HeartBeat = 150,
-		C_Init = 151,
-		C_Disconnect = 152
+		C_Init = 151
+
 		#endregion
 	}
 }

@@ -1,12 +1,6 @@
-﻿using NETSIM.Types.Enum;
+﻿using NETSIM.Packet.Tool;
+using NETSIM.Types.Enum;
 using NETSIM.Types.Interface;
-using NETSIM.Packet.Packets.ForSystem;
-using NETSIM.Packet.Tool;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.Packet.Packets.ForIngame
 {
@@ -19,7 +13,7 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 		public C2S_PlayableObjectSpawnRequest(uint tick)
 		{
-			this.Tick = tick;
+			Tick = tick;
 		}
 
 		public void Serialize(PacketWriter writer)
@@ -47,10 +41,10 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 		public S2C_PlayableObjectSpawnResponse(uint tick, int sessionID, int issuanceID, int colorEnum)
 		{
-			this.Tick = tick;
-			this.TargetSessionID = sessionID;
-			this.ResponsePlayerID = issuanceID;
-			this.TargetColorEnum = colorEnum;
+			Tick = tick;
+			TargetSessionID = sessionID;
+			ResponsePlayerID = issuanceID;
+			TargetColorEnum = colorEnum;
 		}
 
 		public void Serialize(PacketWriter writer)
@@ -82,7 +76,7 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 		public C2S_NonPlayableObjectSpawnRequest(uint tick)
 		{
-			this.Tick = tick;
+			Tick = tick;
 		}
 
 		public void Serialize(PacketWriter writer)
@@ -110,10 +104,10 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 		public S2C_NonPlayableObjectSpawnResponse(uint tick, int sessionID, int issuanceID, int colorEnum)
 		{
-			this.Tick = tick;
-			this.TargetSessionID = sessionID;
-			this.ResponsePlayerID = issuanceID;
-			this.TargetColorEnum = colorEnum;
+			Tick = tick;
+			TargetSessionID = sessionID;
+			ResponsePlayerID = issuanceID;
+			TargetColorEnum = colorEnum;
 		}
 
 		public void Serialize(PacketWriter writer)

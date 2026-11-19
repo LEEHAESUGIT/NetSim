@@ -1,15 +1,10 @@
 ﻿using NETSIM.NetworkCore.Manager;
-using NETSIM.Pipe;
-using NETSIM.Pipe.PipeDispatch;
+using NETSIM.Pipe.PacketDispatch;
+using NETSIM.Pipe.PacketPipe;
 using NETSIM.Router;
 using NETSIM.Router.Handle;
 using NETSIM.Router.Init;
 using NETSIM_ConsoleView.LogMonitor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.NetworkCore.Function
 {
@@ -26,6 +21,9 @@ namespace NETSIM.NetworkCore.Function
 		private SystemPacketRouter _systemPacketRouter;
 		private SystemPacketRouterInit _systemPacketRouterInit;
 
+
+		internal Task SystemProcessLoopAsyncTask(CancellationToken token) => SystemProcessLoopAsync(token);
+
 		internal SystemPacketProcess(SessionManager sessionManager, ModulePipe modulePipe)
 		{
 			// Manager
@@ -40,11 +38,6 @@ namespace NETSIM.NetworkCore.Function
 			_systemPacketRouter = new SystemPacketRouter(_systemPacketRouterInit.InitSystemPacketRouter());
 		}
 
-		internal void Start(CancellationToken shutDownToken)
-		{
-			_ = SystemProcessLoopAsync(shutDownToken);
-		}
-
 		private async Task SystemProcessLoopAsync(CancellationToken shutDownToken)
 		{
 			try
@@ -55,7 +48,7 @@ namespace NETSIM.NetworkCore.Function
 					{
 						while (_modulePipe.SystemPacketPipe.InBoundPipe.TryRead(out ReceivePacketDispatch context))
 						{
-							if (!_sessionManager.TryGetSession(context.SessionID, out _))
+							if (!_sessionManager.LiveSessions.TryGetValue(context.SessionID, out _))
 								continue;
 
 							_systemPacketRouter.Apply(context);
@@ -63,9 +56,14 @@ namespace NETSIM.NetworkCore.Function
 					}
 				}
 			}
-			catch (Exception ex ) 
+			catch (OperationCanceledException)
 			{
-				LogView.Instance.WriteLogFile(ELogType.ERROR , $"SysteProcessLoop Error : {ex}");
+				// 정상종료
+				LogView.Instance.WriteLogFile(ELogType.DEBUG, $"SystemProcessLoopAsync Exit Sucess");
+			}
+			catch (Exception ex)
+			{
+				LogView.Instance.WriteLogFile(ELogType.ERROR, $"SystemProcessLoop Error : {ex}");
 			}
 		}
 

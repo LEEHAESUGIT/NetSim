@@ -1,14 +1,8 @@
 ﻿using NETSIM.GameCore.GameRoom.GameEntity.Snapshots;
+using NETSIM.Packet.Tool;
 using NETSIM.Types.Enum;
 using NETSIM.Types.Interface;
-using NETSIM.GameCore.GameRoom.GameEntity;
-using NETSIM.Packet.Tool;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NETSIM.Packet.Packets.ForIngame
 {
@@ -24,10 +18,10 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 		public S2C_PlayerMoveInterpolationPacket(uint serverTick, uint clientPastTick, int playerID, PlayerMovementSnapshot transformSnapshot)
 		{
-			this.ServerTick = serverTick;
-			this.ClientPastTick = clientPastTick;
-			this.PlayerID = playerID;
-			this.TransformSnapshot = transformSnapshot;
+			ServerTick = serverTick;
+			ClientPastTick = clientPastTick;
+			PlayerID = playerID;
+			TransformSnapshot = transformSnapshot;
 		}
 
 		public void Serialize(PacketWriter writer)
@@ -85,10 +79,10 @@ namespace NETSIM.Packet.Packets.ForIngame
 
 		public S2C_TransformInterpolationPacket(uint tick, int playerCount, List<PlayerInfoSnapshot> playerInfoShapshots, List<PlayerMovementSnapshot> playerTransformSnapshots)
 		{
-			this.Tick = tick;
-			this.PlayerCount = playerCount;
-			this.PlayerInfoSnapshots = playerInfoShapshots;
-			this.PlayerTransformSnapshots = playerTransformSnapshots;
+			Tick = tick;
+			PlayerCount = playerCount;
+			PlayerInfoSnapshots = playerInfoShapshots;
+			PlayerTransformSnapshots = playerTransformSnapshots;
 		}
 
 		public void Serialize(PacketWriter writer)

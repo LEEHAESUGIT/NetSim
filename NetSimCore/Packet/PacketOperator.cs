@@ -1,18 +1,12 @@
 using NETSIM.Common;
-using NETSIM.Pipe.PipeDispatch;
 using NETSIM.GameCore.GameRoom.GameEntity.Snapshots;
-using NETSIM.Types.Enum;
-using NETSIM.Types.Interface;
 using NETSIM.Packet.Packets.ForIngame;
 using NETSIM.Packet.Packets.ForSystem;
-using NETSIM.Pipe;
-using NETSIM.Sockets;
+using NETSIM.Pipe.PacketDispatch;
+using NETSIM.Pipe.PacketPipe;
+using NETSIM.Types.Enum;
+using NETSIM.Types.Interface;
 using NETSIM_ConsoleView.LogMonitor;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
 
 namespace NETSIM.Packet
 {
@@ -27,25 +21,27 @@ namespace NETSIM.Packet
 		private Queue<SendPacketDispatch> TickPerOutbox = new();
 
 		#region GamePacketGenerate
-		internal void GenerateMovePacket(int sessionID, int playerID, EMoveDirFlag moveFlag)
-		{
-			TakeIn(
-				ESendType.BROADCASTEXCEPT,
-				sessionID,
-				new S2C_MovePacket(
-					LiveServerData.Instance.ServerTickCount,
-					playerID,
-					moveFlag)
-				);
+		//internal void GenerateMovePacket(int sessionID, int generation, int playerID, EMoveDirFlag moveFlag)
+		//{
+		//	TakeIn(
+		//		ESendType.BROADCASTEXCEPT,
+		//		sessionID,
+		//		generation,
+		//		new S2C_MovePacket(
+		//			LiveServerData.Instance.ServerTickCount,
+		//			playerID,
+		//			moveFlag)
+		//		);
 
-			LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateMovePacket");
-		}
+		//	//LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateMovePacket");
+		//}
 
-		internal void GeneratePlayableSpawnResponsePacket(int sessionID, int issuanceID, int ColorEnum)
+		internal void GeneratePlayableSpawnResponsePacket(int sessionID, int generation, int issuanceID, int ColorEnum)
 		{
 			TakeIn(
 				ESendType.UNICAST,
 				sessionID,
+				generation,
 				new S2C_PlayableObjectSpawnResponse(
 					LiveServerData.Instance.ServerTickCount,
 					sessionID,
@@ -53,14 +49,15 @@ namespace NETSIM.Packet
 					ColorEnum)
 				);
 
-			LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GeneratePlayableSpawnResponsePacket");
+			//LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GeneratePlayableSpawnResponsePacket");
 		}
 
-		internal void GenerateNonPlayableSpawnResponsePacket(int sessionID, int issuanceID, int ColorEnum)
+		internal void GenerateNonPlayableSpawnResponsePacket(int sessionID, int generation, int issuanceID, int ColorEnum)
 		{
 			TakeIn(
 				ESendType.BROADCASTEXCEPT,
 				sessionID,
+				generation,
 				new S2C_NonPlayableObjectSpawnResponse(
 					LiveServerData.Instance.ServerTickCount,
 					sessionID,
@@ -68,27 +65,31 @@ namespace NETSIM.Packet
 					ColorEnum)
 				);
 
-			LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateNonPlayableSpawnResponsePacket");
+			//LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateNonPlayableSpawnResponsePacket");
 		}
-		internal void GeneratePlayerMoveInterpolationPacket(uint clientPastTick, int playerID, PlayerMovementSnapshot playerTransformSnapshot)
+
+		//internal void GeneratePlayerMoveInterpolationPacket(uint clientPastTick, int playerID, PlayerMovementSnapshot playerTransformSnapshot)
+		internal void GeneratePlayerMoveInterpolationPacket(int sessionID, int playerID, int generation, uint clientPastTick, PlayerMovementSnapshot playerMovementSnapshot)
 		{
 			TakeIn(
-				ESendType.BROADCAST,
-				-1,
+				ESendType.UNICAST,
+				sessionID,
+				generation,
 				new S2C_PlayerMoveInterpolationPacket(
 					LiveServerData.Instance.ServerTickCount,
 					clientPastTick,
 					playerID,
-					playerTransformSnapshot
+					playerMovementSnapshot
 					)
 				);
 
-			LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GeneratePlayerMoveInterpolationPacket");
+			//LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GeneratePlayerMoveInterpolationPacket");
 		}
 		internal void GenerateTransformInterpolationPacket(int playerCount, List<PlayerInfoSnapshot> playerInfoSnapshots, List<PlayerMovementSnapshot> playerTransformSnapshots)
 		{
 			TakeIn(
 				ESendType.BROADCAST,
+				-1,
 				-1,
 				new S2C_TransformInterpolationPacket(
 					LiveServerData.Instance.ServerTickCount,
@@ -98,14 +99,15 @@ namespace NETSIM.Packet
 					)
 				);
 
-			LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateTransformInterpolationPacket");
+			//LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateTransformInterpolationPacket");
 		}
 
-		internal void GenerateLivePlayerRenewalPacket(int sessionID, int playerCount, List<PlayerInfoSnapshot> playerInfoSnapshots, List<PlayerMovementSnapshot> playerTransformSnapshots)
+		internal void GenerateLivePlayerRenewalPacket(int sessionID, int generation, int playerCount, List<PlayerInfoSnapshot> playerInfoSnapshots, List<PlayerMovementSnapshot> playerTransformSnapshots)
 		{
 			TakeIn(
 				ESendType.UNICAST,
 				sessionID,
+				generation,
 				new S2C_LivePlayerRenewalPacket(
 					LiveServerData.Instance.ServerTickCount,
 					playerCount,
@@ -114,18 +116,19 @@ namespace NETSIM.Packet
 					)
 				);
 
-			LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateLivePlayerRenewalPacket ");
+			//LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateLivePlayerRenewalPacket ");
 		}
 		#endregion
 
-		private void TakeIn(ESendType sendType, int sessionID, IPacket packet)
+		private void TakeIn(ESendType sendType, int sessionID, int generation, IPacket packet)
 		{
-			this.TickPerOutbox.Enqueue(new SendPacketDispatch
-			{
-				SendType = sendType,
-				SessionID = sessionID,
-				Packet = packet
-			});
+			TickPerOutbox.Enqueue(new SendPacketDispatch
+			(
+				sendType,
+				sessionID,
+				generation,
+				packet
+			));
 		}
 		internal void TakeOut(GamePacketPipe gamePacketPipe)
 		{
@@ -148,13 +151,16 @@ namespace NETSIM.Packet
 		private Queue<SendPacketDispatch> TickPerOutbox = new();
 
 		#region SystemPacketGenerate
-		internal void GenerateHeartbeatPacket(int sessionID, long sendTime, long serverTick, long sessionTick)
+		internal void GenerateHeartbeatPacket(int sessionID, int generation, long sendTime, long serverTick, long sessionTick)
 		{
 			TakeIn(
 				ESendType.UNICAST,
 				sessionID,
+				generation,
 				new S2C_HeartBeat(
 					LiveServerData.Instance.ServerTickCount,
+					sessionID,
+					generation,
 					sendTime,
 					serverTick,
 					sessionTick)
@@ -162,28 +168,45 @@ namespace NETSIM.Packet
 
 			//	LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateHeartbeatPacket");
 		}
-		internal void GenerateInitSessionResponsePacket(int sessionID)
+		internal void GenerateInitSessionResponsePacket(int sessionID, int generation)
 		{
 			TakeIn(
 				ESendType.UNICAST,
 				sessionID,
+				generation,
 				new S2C_InitResponse(
 					LiveServerData.Instance.ServerTickCount,
-					sessionID)
+					sessionID,
+					generation)
 				);
 
 			LogView.Instance.WriteLogFile(ELogType.INFO, $"Tick : {LiveServerData.Instance.ServerTickCount}, GenerateInitSessionResponsePacket");
 		}
+		internal void GenerateDisconnectedPacket(int sessionID, int playerID, int generation)
+		{
+			TakeIn(
+				ESendType.BROADCASTEXCEPT,
+				sessionID,
+				generation,
+				new S2C_DisconnectedSession(
+					LiveServerData.Instance.ServerTickCount,
+					playerID,
+					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+					)
+				);
+		}
+
 		#endregion
 
-		private void TakeIn(ESendType sendType, int sessionID, IPacket packet)
+		private void TakeIn(ESendType sendType, int sessionID, int generation, IPacket packet)
 		{
-			this.TickPerOutbox.Enqueue(new SendPacketDispatch
-			{
-				SendType = sendType,
-				SessionID = sessionID,
-				Packet = packet
-			});
+			TickPerOutbox.Enqueue(new SendPacketDispatch
+			(
+				sendType,
+				sessionID,
+				generation,
+				packet
+			));
 		}
 		internal void TakeOut(SystemPacketPipe systemPacketPipe)
 		{
