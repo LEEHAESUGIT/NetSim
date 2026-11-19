@@ -1,137 +1,261 @@
 # NetSim (Network Simulation)
-## 상태 : 진행 중(프로토타입)
-## 프로젝트 시작 : 2026.04
-### 연관 프로젝트
-+ 클라이언트 : [NetSimClient](<https://github.com/LEEHAESUGIT/NetSimClient>)
 
-# 개발환경
-+ IDE : Visual Studio 2022
-+ Language & Runtime : C#(.NET 8.0 이상 / C# 12+)
-+ Monitoring & UI : Console
-  + Package : Spectre.Console
+Unity 클라이언트의 이동 입력을 받아 서버에서 플레이어 상태를 계산하고, 그 결과를 접속자에게 전달하는 **TCP 기반 권위형 데디케이티드 게임 서버 프로토타입**입니다.
 
+상용 네트워크 엔진에 의존하지 않고 C# 비동기 소켓 I/O, 바이너리 패킷 처리, Tick 기반 시뮬레이션을 직접 구현하며 네트워크 통신과 상태 동기화 과정을 연구하고 있습니다.
 
-# 소개
-"NetSim"은 멀티플레이어 환경에서 서버 - 클라이언트 간의 네트워크 통신 및 동기화 과정을 이해하기 위해 구현하고 있는 네트워크 시뮬레이션 서버의 프로토타입 입니다.
-상용 엔진의 네트워크 기능을 가져다 사용하는것을 넘어, 서버 아키텍처의 근본적인 원리와 소켓 통신(패킷기반)의 흐름을 직접 테스트하고 연구하는데 목적이 있습니다.
-또한 비동기 시스템을 구성하여, 서버의 반응성을 높이고, 생성과 사용의 타이밍을 직접 관리하고 있습니다.
-데디케이티드 권위형 서버를 모델로 모든 결정과 책임을 서버에게 집중하여, 전략적인 패킷구조를 세팅하고 클라이언트(Unity)와 통신하여 룸(Room)형태의 샌드박스 기반 멀티플레이 게임의 백엔드 입니다.
+- **개발 기간:** 2026.04 ~ 진행 중
+- **현재 구성:** 단일 서버 · 단일 Room · 최대 8개 세션 / 8명 플레이어
+- **시뮬레이션:** 목표 64 Tick/s · 고정 이동 계산 간격 1/64초
+- **상태 전달:** 매 Tick(1 Tick 간격) 상태 패킷 생성 후 비동기 송신
+- **연관 프로젝트:** [NetSimClient](https://github.com/LEEHAESUGIT/NetSimClient)
 
-+ TCP/IP 를 사용해서 데디케이티드 권위형 서버(Dedicated Authoritative Server)를 구축하는 프로젝트
-+ 전략적인 패킷구조와 비동기 I/O 최적화를 통해 고성능 로컬 서버구현을 추구
-+ Unity 클라이언트와 연동되는 룸(Room)형태의 샌드박스 기반 멀티플레이 게임의 백엔드
+## 목차
 
-# 주요기능
-+ 권위형 서버 기반 상태 판정
-  + 클라이언트의 임의 데이터변경 및 변조(해킹)를 방지하기 위해 클라이언트는 오직 입력 의도(행동플래그) , 생명주기(heartbeat)만  패킷으로 전송
-  + 플레이어의 최종 이동 속도, 충돌검사 , 좌표갱신 등 모든 물리적, 논리적 판정을 서버가 전담하여 결정
+- [현재 구현 범위](#현재-구현-범위)
+- [개발 환경](#개발-환경)
+- [실행 방법](#실행-방법)
+- [시스템 구성과 처리 흐름](#시스템-구성과-처리-흐름)
+- [프로젝트 구조](#프로젝트-구조)
+- [코드 탐색 안내](#코드-탐색-안내)
+- [현재 한계와 개선 과제](#현재-한계와-개선-과제)
+- [개발 배경](#개발-배경)
 
-+ 메모리 및 GC최적화
-  + 빈번한 패킷 송수신으로 인한 GC스파이크를 방지하기 위한 버퍼 풀링(BufferPool) 및 세션 객체 풀링 (Object Pool) 구축
+## 현재 구현 범위
 
-+ 비동기 제어
-  + 비동기 제어에 맞춰 데이터 구조를 System.Collections.Concurrent 동시성 컬렉션,Channel<T>,Interlocked 을 활용해 락 경합을 최소화한 스레드 세이프 데이터 파이프라인 관리
-  + CancellationTokenSource 계층 구조를 활용해 세션 및 룸 단위의 격리, 수명주기를 제어하고 , 비동기 작업의 의도적인 연쇄취소 및 안전한 리소스 회수 보장
+| 기능 | 구현 내용 |
+| --- | --- |
+| 서버 권위형 이동 | SessionID와 Generation으로 입력 소유권을 확인하고, Tick별 이동 플래그를 보관한 뒤 서버에서 위치 계산 |
+| Tick 기반 시뮬레이션 | 고정 `deltaTime`으로 플레이어별 이동을 Tick당 한 번 계산하고, 실제 작업·대기 시간을 반영해 루프 간격 조절 |
+| 상태 동기화 | 매 Tick 전체 플레이어 스냅샷과 소유자용 상태 응답을 생성하여 클라이언트의 보간·재조정에 필요한 기준 전달 |
+| 자체 바이너리 프로토콜 | 6바이트 고정 헤더와 가변 본문, 직렬화·역직렬화, TCP 수신 버퍼에서 패킷 경계 분리 |
+| 비동기 처리와 세션 관리 | `Channel<T>` 기반 패킷·이벤트 전달, 비동기 송수신, Heartbeat 감시, 세션 종료 작업 관측과 풀 반환 |
+| 모니터링과 로그 | 실제 경과 시간 기준 TPS·송수신량 집계, 서버·세션 상태 콘솔 표시, Channel 기반 파일 로그 기록 |
 
+서버는 **이동 계산과 상태 전달**을 담당합니다. 원격 플레이어의 화면 보간과 로컬 플레이어의 예측·재조정은 NetSimClient에서 수행합니다. 현재는 이동 동기화를 중심으로 구현하고 있으며, 충돌 판정과 여러 Room의 독립 운영은 구현 범위에 포함하지 않습니다.
 
-+ 전략적 바이너리 패킷 구조
-  + 텍스트(XML,JSON) 직렬화 오버헤드를 배제하고, 고정 헤더(Header) 와 가변 페이로드(Body)로 구성된 순수 바이트 스트림 프로토콜 설계
-  + 비트연산을 활용해 이동 방향 등의 입력 데이터를 1바이트 수준으로 압축 전송
-  
-+ 룸(Room) 격리 관리 시스템
-  + 모듈(Module)단위로 네트워크(NetworkModule),게임(GameModule),측정(MeasureModule)로 나누어 각 모듈의 연관성을 최소화
-  + 비동기방식에 최적화된 Channel<T>로 구성된 파이프를 통해 각 모듈간의 데이터 송수신을 통해 비동기 큐 처리
+## 개발 환경
 
-+ 실시간 콘솔 대시보드 모니터
-  + Spectre.Console 패키지를 활용하여 세션 수 , 룸 상태 , 초당 패킷처리 등 실시간 레이아웃 콘솔 UI로 시각화
-  + 커스텀 LogViwer를 통해 Windows PowerShell 환경에서 실시간 서버 로그 시각화(진행 중) 
+| 구분 | 환경 |
+| --- | --- |
+| 개발 도구 | Visual Studio 2022 |
+| 언어 / 서버 런타임 | C# / .NET 8 (`net8.0`) |
+| 실행 환경 | Windows · PowerShell 로그 모니터 사용 |
+| 네트워크 | TCP/IP · `TcpListener`, `TcpClient`, `NetworkStream` |
+| 비동기 처리 | `Task`, `async/await`, `CancellationToken`, `Channel<T>` |
+| 데이터 처리 | `Span<T>`, `Memory<T>`, `BinaryPrimitives`, `FrozenDictionary` |
+| 콘솔 UI | Spectre.Console 0.57.2 |
+| 연동 클라이언트 | Unity 6000.3.9f1 · 별도 NetSimClient 저장소 |
 
-# NetSim 아키텍처 다이이어그램
-<img width="1645" height="8191" alt="NetSim Async Pipeline-2026-10-05" src="https://github.com/user-attachments/assets/90fb9e97-ca07-49e4-88e3-b9de0c05ed22" />
+`NetSimCore`는 실행 프로젝트이며, `NetSimShared`와 `NetSimViewConsole`은 서버가 참조하는 라이브러리입니다. 두 라이브러리를 별도로 실행할 필요는 없습니다.
 
+## 실행 방법
 
+### 1. 서버 준비
 
+1. 이 저장소를 내려받고 .NET 8 SDK를 준비합니다.
+2. `NetSimCore` 폴더의 `NETSIM.sln`을 Visual Studio에서 엽니다.
+3. `NETSIM` 프로젝트의 `Shared`, `NETSIM_ConsoleView` 참조가 연결되는지 확인합니다.
+4. NuGet 패키지를 복원하고 `NETSIM`을 시작 프로젝트로 지정합니다.
 
-# 구성
+**프로젝트 참조 확인:** 현재 `NETSIM.csproj`의 두 프로젝트 참조는 작성자 환경의 절대 경로로 지정되어 있습니다. 다른 PC에서 참조를 찾지 못하면 Visual Studio에서 해당 참조를 제거한 뒤, 솔루션의 `Shared`와 `NETSIM_ConsoleView` 프로젝트를 다시 참조하도록 설정해야 합니다.
+
+### 2. 서버 실행
+
+Visual Studio에서 시작 프로젝트를 실행합니다. 터미널에서는 프로젝트 참조를 확인한 뒤, `NetSimCore` 폴더에서 다음 명령을 사용합니다.
+
+```powershell
+dotnet restore NETSIM.csproj
+dotnet run --project NETSIM.csproj
 ```
+
+서버는 **TCP 9999 포트**에서 연결을 기다립니다. 서버 콘솔에는 상태 대시보드가 표시되고, 별도의 PowerShell 창에서는 로그를 확인할 수 있습니다.
+
+### 3. 클라이언트 연결
+
+1. [NetSimClient](https://github.com/LEEHAESUGIT/NetSimClient) 저장소를 내려받습니다.
+2. Unity 6000.3.9f1에서 프로젝트를 엽니다.
+3. `Scenes` 폴더의 `SampleScene.unity`를 열고 Play를 실행합니다.
+4. 방향키 또는 WASD로 플레이어를 이동합니다.
+
+클라이언트의 기본 접속 대상은 **같은 PC의 `127.0.0.1:9999`**입니다. 다른 PC에서 접속하려면 클라이언트의 접속 주소를 서버 주소로 변경해야 합니다.
+
+### 4. 확인할 동작과 종료
+
+| 상황 | 확인할 내용 |
+| --- | --- |
+| 서버만 실행 | 대시보드의 서버 실행 상태, TPS와 가동 시간 |
+| 클라이언트 접속 | 세션 수와 세션 정보 변경, 플레이어 생성 |
+| 플레이어 이동 | 화면의 이동 결과와 서버의 이동 명령 표시, 송수신량 변화 |
+| 클라이언트 여러 개 연결 | 각 클라이언트에서 다른 플레이어의 생성과 이동 확인 |
+| 클라이언트 종료 | 서버의 세션 해제·풀 반환 로그와 세션 수 변화 |
+
+여러 클라이언트 비교에는 Unity Editor와 별도로 빌드한 클라이언트 실행 파일을 함께 사용할 수 있습니다.
+
+서버 종료는 서버 콘솔에서 **Ctrl+C**를 사용합니다. 취소 신호를 전달한 뒤 서버의 모듈과 세션 작업 종료를 기다리는 경로로 진입합니다. 별도로 열린 로그 모니터 창은 확인 후 닫습니다. 로그 파일은 실행 파일 기준 `Logs` 폴더에 기록됩니다.
+
+위 실행 안내는 현재 코드와 프로젝트 설정을 기준으로 작성했습니다. 신규 PC에서의 설치·실행과 다중 접속 시나리오는 별도 확인이 필요합니다.
+
+## 시스템 구성과 처리 흐름
+
+### 모듈 구성
+
+```mermaid
+flowchart TB
+    C["Unity Client<br/>입력 전송 · 상태 표시"]
+
+    subgraph Server["NetSim"]
+        N["NetworkModule<br/>접속 · 세션 관리 · 송수신"]
+        G["GameModule<br/>단일 Room · Tick 시뮬레이션"]
+        M["MeasureModule<br/>서버 · 세션 측정값 집계"]
+        V["ConsoleView<br/>Spectre.Console"]
+        L["LogView<br/>로그 큐 · 파일 기록"]
+
+        N -->|"게임 입력 · 종료 이벤트 / Channel"| G
+        G -->|"응답 · 상태 패킷 / Channel"| N
+        N -.->|"세션 · 트래픽 측정값"| M
+        G -.->|"처리 Tick 수"| M
+        M -->|"상태 DTO"| V
+        N -.->|"로그"| L
+        G -.->|"로그"| L
+    end
+
+    C <-->|"TCP / 바이너리 패킷"| N
+    L --> P["PowerShell 로그 모니터"]
+```
+
+네트워크·게임·측정 모듈은 같은 서버 프로세스에서 동작합니다. 네트워크와 게임은 Pipe를 통해 데이터를 주고받고, 플레이어 상태 갱신은 Room의 Tick 루프에서 진행합니다.
+
+### 이동 입력에서 상태 전달까지
+
+1. **수신과 패킷 복원:** `Session`이 수신 버퍼에 바이트를 모으고, 헤더의 길이를 기준으로 완성된 패킷을 분리합니다. `PacketFormatter`가 패킷 ID에 맞춰 역직렬화합니다.
+2. **입력 전달과 검증:** 게임 패킷을 InBoundPipe에 넣고, Room이 Tick당 최대 500개를 꺼내 라우터에 전달합니다. 이동 핸들러는 소유 세션과 Generation을 확인한 뒤 입력 Tick·이동 플래그를 보관합니다.
+3. **서버 시뮬레이션:** 이번 시점까지 적용 가능한 최신 입력을 선택하고, 플레이어별로 고정 `deltaTime`을 사용해 한 번 이동을 계산합니다. 새 입력이 없으면 이전 이동 플래그를 유지합니다.
+4. **상태 패킷 생성:** 이동 계산 후 매 Tick 현재 플레이어 상태를 캡처합니다. 전체 스냅샷은 전체 접속자에게, 입력 시뮬레이션이 시작된 플레이어의 상태는 소유 세션에 전달하도록 패킷을 만듭니다.
+5. **비동기 송신:** `GamePacketOperator`의 임시 큐 → OutBoundPipe → `PacketSender` → 세션 송신 큐 → `NetworkStream.WriteAsync` 순서로 전송합니다.
+
+| 상태 패킷 | 전달 내용 | 클라이언트의 사용 목적 |
+| --- | --- | --- |
+| `S_AllInterpolation` | 서버 Tick, 플레이어 목록과 위치·방향 | 원격 플레이어의 스냅샷 보간 |
+| `S_Transform` | 소유 플레이어의 위치·방향, `ClientPastTick` | 서버 상태 복원과 미확정 입력 재실행 |
+
+`ClientPastTick`에는 서버가 입력 시간축에서 시뮬레이션을 마친 시점을 넣습니다. 새 입력 없이 이전 플래그를 유지한 구간도 포함하므로, 마지막으로 수신한 입력 번호와는 다를 수 있습니다.
+
+초기화·Heartbeat 등 시스템 패킷은 별도 시스템 처리 루프에서 소비합니다. 연결 종료 이벤트는 Room의 이벤트 처리 단계로 전달됩니다.
+
+### 바이너리 패킷 형식
+
+| 영역 | 크기 | 내용 |
+| --- | --- | --- |
+| 전체 길이 | 2바이트 · `ushort` | 헤더를 포함한 패킷 길이 |
+| 패킷 ID | 4바이트 · `int` | 처리할 패킷 종류 |
+| 본문 | 패킷별 가변 | Tick, 플레이어 정보, 이동 플래그 등 |
+
+헤더의 정수는 Little Endian으로 기록합니다. 수신한 데이터에 헤더나 본문이 부족하면 다음 수신을 기다리고, 여러 패킷이 함께 도착하면 완성된 패킷을 차례로 분리합니다.
+
+## 프로젝트 구조
+
+주요 소스 폴더와 탐색에 필요한 파일을 표시했습니다. 빌드 결과물, IDE 설정, 개인 작업 지침은 생략했습니다.
+
+```text
 NetSim/
-├──── NetSimCore/                  # 서버의 핵심 로직 및 네트워크 처리 모듈
-│ ├──── Common/
-│ │ └──── DefaultPlayer.cs
-│ ├──── Context/
-│ │ ├──── ReceivePacketContext.cs
-│ │ └──── ResultPacketContext.cs
-│ ├──── Domain/
-│ │ ├──── State/
-│ │ └──── DTOFactory.cs
-│ ├──── Mapper/
-│ │ └──── SessionPlayerMapper.cs
-│ ├──── Measure/                   # 서버 및 세션 성능/트래픽 측정 (모니터링)
-│ │ ├──── ServerMeasure.cs
-│ │ └──── SessionMeasure.cs
-│ ├──── MetaData/
-│ │ ├──── Enum/
-│ │ └──── Interface/               # IModule, IPacket 등 핵심 인터페이스
-│ ├──── Object/
-│ │ └──── Player.cs
-│ ├──── Packet/                    # 패킷 정의 및 직렬화/역직렬화 처리
-│ │ ├──── Packets/
-│ │ │ ├──── ClientToServerPacket/
-│ │ │ ├──── ForIngame/
-│ │ │ ├──── ForSystem/
-│ │ │ ├──── ServerToClientPacket/
-│ │ │ └──── SharedPacket/
-│ │ └──── Tool/                    # PacketFormatter.cs, PacketRWTool.cs 등
-│ ├──── Server/                    # 룸(Room), 매니저, 라우팅 등 서버 인게임 로직
-│ │ ├──── Function/
-│ │ ├──── Manager/
-│ │ ├──── Module/                  # GameModule, MeasureModule, NetworkModule
-│ │ ├──── Router/                  # GamePacketRouter, SystemPacketRouter 및 Pipe 구조
-│ │ └──── Service/
-│ ├──── Sockets/                   # 소켓 비동기 I/O 및 버퍼 관리
-│ │ ├──── Buffer/                  # ReceiveBuffer, SendBuffer
-│ │ └──── Session.cs
-│ ├──── System/
-│ │ └──── Buffer/
-│ └──── ProgramMain.cs
+├── NetSimCore/                       # 서버 실행 프로젝트
+│   ├── Common/
+│   │   ├── LiveServerData.cs
+│   │   └── ServerDataConfigration.cs
+│   ├── Domain/
+│   │   ├── State/
+│   │   └── DTOFactory.cs
+│   ├── Event/
+│   ├── GameCore/
+│   │   ├── Function/
+│   │   ├── GameRoom/
+│   │   │   ├── GameEntity/
+│   │   │   │   ├── Component/
+│   │   │   │   ├── Snapshots/
+│   │   │   │   └── Player.cs
+│   │   │   ├── TickBuffer/
+│   │   │   └── Room.cs
+│   │   ├── Manager/
+│   │   └── GameModule.cs
+│   ├── Mapper/
+│   ├── MeasureCore/
+│   │   ├── Measure/
+│   │   └── MeasureModule.cs
+│   ├── NetworkCore/
+│   │   ├── Function/
+│   │   ├── Manager/
+│   │   ├── Service/
+│   │   └── NetworkModule.cs
+│   ├── Packet/
+│   │   ├── Packets/
+│   │   │   ├── ForIngame/
+│   │   │   ├── ForSystem/
+│   │   │   └── SharedPacket/
+│   │   ├── Tool/
+│   │   └── PacketOperator.cs
+│   ├── Pipe/
+│   │   ├── EventDispatch/
+│   │   ├── EventPipe/
+│   │   ├── PacketDispatch/
+│   │   ├── PacketPipe/
+│   │   └── Pipe.cs
+│   ├── Router/
+│   │   ├── Handle/
+│   │   └── Init/
+│   ├── Sockets/
+│   │   ├── Buffer/
+│   │   └── Session.cs
+│   ├── Types/
+│   │   ├── Enum/
+│   │   └── Interface/
+│   ├── ProgramMain.cs
+│   ├── ServerMain.cs
+│   ├── NETSIM.csproj
+│   └── NETSIM.sln
 │
-├──── NetSimShared/                # 클라이언트(Unity)와 공유 가능한 공통 데이터 구조
-│ ├──── Configuration/
-│ ├──── DTO/                       # 상태 전송을 위한 DTO (ServerStateDTO 등)
-│ ├──── Enum/
-│ └──── SharedMain.cs
+├── NetSimShared/                     # 서버와 콘솔 사이의 공유 데이터
+│   ├── DTO/
+│   │   └── Function/
+│   ├── Enum/
+│   └── Shared.csproj
 │
-├──── NetSimViewConsole/           # Spectre.Console을 활용한 실시간 대시보드 UI
-│ ├──── Common/
-│ ├──── Configration/
-│ ├──── Draw/                      # DrawManager.cs, DrawTool.cs
-│ └──── ConsoleView.cs
+├── NetSimViewConsole/                # 콘솔 화면과 로그
+│   ├── Common/
+│   │   └── Tool/
+│   ├── Configration/
+│   ├── Draw/
+│   ├── LogMonitor/
+│   ├── ConsoleView.cs
+│   └── NETSIM_ConsoleView.csproj
 │
-└──── README.md
+└── README.md
 ```
-# 요약
-상용 완성형 엔진에 의존하지 않고, C#.Net 비동기 소켓 I/O부터 룸 기반 샌드박스 로직까지 구현한 데디케이티드 권위형 게임 서버입니다.
 
+## 코드 탐색 안내
 
-# 한계점
-+ TCP 프로토콜 특성상의 문제점
-  + 문제 : 현재 네트워크 통신은 TCP/IP기반으로 구현되어 있어 데이터의 신뢰성은 보장되지만 패킷 유실 발생시 순간적인 지연이 발생할 수 있습니다.
-  + 개선 : 액션성이 중요한 데이터는 UDP기반으로 변경이 필요하고, 신뢰성이 필요한 데이터는 TCP로 분리하는 하이브리드 프로토콜 구조로 발전시킬 필요가 있습니다. 
-+ 분산 서버 구조가 아닌 단일 호스트 기반
-  + 문제 : 현재는 최대 8인이라는 제한을 둔 소규모 단위의 로컬 서버를 구성했습니다. 하지만 소규모를 상정하고 구축해놓은 서버이기에 대규모 서버로의 발전 가능성에 대해서는 한계가 명확합니다.
-  + 개선 : 현재는 단일 서버 코어의 완성도에 집중 했기에 향후 확장 단계에서 검토해 볼 가설을 기반으로 개선 방안을 이야기 해보자면, 한 서버의 프로토콜에 너무 많은 클라이언트가 접근해서 수용할 수 있는 패킷의 수를 넘어간다던지, 패킷 처리 지연 및 서버 연산병목 가능성이 생깁니다. 그래서 일정 인원을 제한으로하고 서버프로그램을 물리적으로 늘려가며, 각 서버들을 관리하는 라우터를 두고 그 라우터를 메인 서버에서 관리하는 방법을 생각해 보았습니다.
+처음에는 **`ProgramMain.cs` → `ServerMain.cs` → `Room.cs`** 순서로 읽으면 실행 시작, 모듈 구성, 게임 처리 순서를 파악할 수 있습니다.
 
-# 회고
-아직 해결해야 할 과제가 많습니다. 현재 아키텍처의 문제를 지속적으로 점검해야하고, 잠재적 버그를 예방하고, 가독성 높은 코드를 작성하는 등 더 견고한 개발 방향성을 향해 나아가는 과정이기 때문입니다.
-하지만, 리펙토링,코드리뷰,AI피드백 등 가용할수 있는 모든 자원을 동원해 바로 잡아가면 완성도를 높일수 있다고 확신합니다. 
+| 살펴볼 내용 | 주요 파일 | 확인할 역할 |
+| --- | --- | --- |
+| 실행과 종료 | `ProgramMain.cs`, `ServerMain.cs` | 시작점, 모듈 생성, 취소 신호와 종료 대기 |
+| 서버 접속과 세션 | `NetworkModule.cs`, `SessionManager.cs`, `Session.cs` | 접속 수락, 세션 재사용, 송수신 Task 생명주기 |
+| 입력 처리와 이동 | `GameHandle.cs`, `Player.cs`, `WorldTickBuffer.cs` | 입력 검증, Tick별 입력 보관·선택, 서버 위치 계산 |
+| 플레이어 상태 분리 | `PlayerTickComponent.cs`, `PlayerMoveFlagComponent.cs`, `PlayerTransformComponent.cs` | 입력 시간축, 이동 플래그, 위치·방향 관리 |
+| Tick과 상태 전송 | `Room.cs`, `PacketOperator.cs`, `PacketSender.cs` | Tick 처리 순서, 상태 패킷 생성, 전송 대상 선택 |
+| 패킷과 전달 경계 | `PacketFormatter.cs`, `PacketRWTool.cs`, `Pipe.cs` | 바이너리 변환과 Channel 기반 데이터 전달 |
+| 측정과 화면 | `MeasureModule.cs`, `DTOFactory.cs`, `ConsoleView.cs`, `LogView.cs` | 측정값 집계, DTO 변환, 콘솔 표시와 로그 기록 |
 
-처음 네트워크 프로토콜을 사용하기위해 접근했던 계기는 멀티플레이어 환경의 게임을 만들때 서버는 어떻게 할것이냐? 라는 의문에서부터 시작되었습니다. 상용화가 되어있는 네트워크 엔진을 사용하는 것 보다 직접 구현해보는게 더 재미있을것 같다, 서버에서 생겨나는 비용을 아낄수도 있지 않을까? 이 두 생각이 결정하는데 큰 영향을 끼쳤습니다. 
+`WorldTickBuffer.cs`에는 현재 플레이어의 미적용 입력을 보관하는 `TickOfPlayerFlagBuffer`가 정의되어 있습니다. Room의 과거 월드 상태를 매 Tick 기록하는 단계는 현재 루프에 없습니다.
 
-첫번째로 생각한 이론은 일반적으로 알고 있는 "호스트 기반 클라이언트 서버" 이었습니다. 하지만 게임을 할때 항상 느끼던 불편함이 방을 열었던 호스트가 종료시 모든 세션이 종료된다는 문제였습니다. 이를 해결하기위해 두번째로 생각했던것이 호스트를 다른 게스트가 넘겨받으면 되지 않을까 였습니다. 찾아보니 "호스트마이그레이션" 이라는 기술이었습니다. 그러나 구축 난이도가 높기에, 우선 기본적인것부터 해보자 해서 시작한 프로젝트가 NetSim 입니다.
+## 현재 한계와 개선 과제
 
-# 직면했던 난관과 해결
-+ 바이너리 직렬화와 저수준 메모리 제어 : 가장 생소했던 영역은 패킷을 원시 바이너리로 변환하는 작업이었습니다. 과거 ECS 프로토타입을 구현하며 바이너리와 비트마스크를 다뤄본 경험은 있었으나, 네트워크 버퍼에 직접 바이트를 순차적으로 기록하고 읽어내는 저수준 메모리 방식은 익숙하지 않았습니다. 고정 헤더와 바디를 설계하고 변환 기능을 구성하며 데이터 경량화에 대해 체득하게 되었습니다.
-+ 스레드 세이프와 비동기 파이프라인 통제 : 가장 난해했던 부분은 전체 파이프라인을 구축한 후 다중 스레드 환경에서 안전하게 데이터를 갱신하고 전송하는 제어 루프 였습니다. 네트워크는 자율성을 보장하면서도 엄격한 순서와 제한을 두어야 하므로, 서버 내부에서 비동기로 생성하되 파이프에 Channel<T>, System.Collections.Concurrent 동시성 컬렉션, Interlocked 등을 사용해 자율성과 규칙을 부여했습니다.
+- **소규모 단일 Room:** 현재 최대 8개 세션과 단일 Room을 대상으로 합니다. 다중 Room, 분산 서버와 대규모 부하 처리는 별도 과제입니다.
+- **Tick 시간축:** 64 Tick/s는 목표값입니다. 클라이언트와 서버의 입력 Tick 대응은 최초 기준점과 같은 Tick 진행 속도를 전제로 하며, 장기적인 시계 drift 보정은 구현하지 않았습니다.
+- **입력 적용 정책:** 적용 가능한 입력 중 최신 플래그를 선택합니다. 지연된 입력을 과거 Tick으로 되돌려 재계산하지 않으므로, 짧은 방향 전환이 생략될 수 있습니다.
+- **큐 적체와 TCP 지연:** 현재 Channel은 용량 제한이 없습니다. 소비보다 입력·출력이 빠른 상황의 backpressure와, TCP 재전송으로 인한 후속 데이터 지연을 검증할 필요가 있습니다.
+- **검증 범위:** 비정상 패킷 경계 조건, 반복 접속·종료와 종료 경합을 보완·검증할 필요가 있습니다. 세션·플레이어 재사용은 구현되어 있지만, GC 감소나 처리량 향상을 측정한 벤치마크 결과는 이 문서에서 제시하지 않습니다.
 
-# 앞으로의 과제
-현재 프로토타입 단계인 만큼 더 견고한 아키텍처 설계를 고민해볼 수 있고, 리펙토링 과정에서 배울수 있는 여지가 여전히 많습니다. 프로젝트의 엔딩까지 가용할 수 있는 모든 자원을 동원해 완성도와, 발전가능성 까지 챙기는 서버 엔진으로 발전시켜 나갈 계획입니다.
+## 개발 배경
+
+플레이어 호스트가 종료되면 다른 접속자도 게임을 이어가기 어려운 경험에서 출발했습니다. Host Migration을 검토한 뒤, 우선 네트워크와 동기화의 기본 구조를 이해하기 위해 서버와 클라이언트를 분리한 Dedicated Server를 직접 구현하기로 했습니다.
